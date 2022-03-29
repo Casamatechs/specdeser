@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+mainClassName = 'kr.sanchez.specdeser.benchmark.LiteralDeserializerBenchmark'
+
+group 'kr.sanchez.specdeser'
+version '0.1'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    jmhVersion = '1.33'
+}
+
+dependencies {
+    implementation project(':core')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+
+    implementation group: 'org.openjdk.jmh', name: 'jmh-core', version: "${jmhVersion}"
+    annotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: "${jmhVersion}"
+}
+
+shadowJar {
+    archiveName = 'specdeser-benchmark.jar'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
+
+test {
+    useJUnitPlatform()
+}

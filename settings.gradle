@@ -1,0 +1,4 @@
+rootProject.name = 'specdeser'
+include 'benchmark'
+include 'core'
+
