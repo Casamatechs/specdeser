@@ -1,0 +1,30 @@
+{
+  "id": 120000010,
+  "username": "csanchezm",
+  "created_at": "2014-10-30T17:01:37.000Z",
+  "external_rating": 8.45,
+  "education": [
+    {
+      "short_name": "UPM",
+      "long_name": "Universidad Politécnica de Madrid",
+      "country": "Spain",
+      "city": "Madrid"
+    },
+    {
+      "short_name": "TU/e",
+      "long_name": "Eindhoven University of Technology",
+      "country": "The Netherlands",
+      "city": "Eindhoven"
+    },
+    {
+      "short_name": "A?",
+      "long_name": "Aalto University",
+      "country": "Finland",
+      "city": "Espoo"
+    }
+  ],
+  "isActive": true,
+  "credits": 332,
+  "local_address": null,
+  "favorite_emoji": "\uD83E\uDD23"
+}

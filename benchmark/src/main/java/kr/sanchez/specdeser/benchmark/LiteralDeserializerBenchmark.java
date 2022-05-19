@@ -26,62 +26,119 @@ public class LiteralDeserializerBenchmark {
         public int dummyJacksonPointer;
     }
 
-    @Benchmark
-    public Boolean deserializeTrueBenchmark(StateObj stateObj) throws DeserializationException {
-        return stateObj.deserializer.deserialize(stateObj.trueUTF8);
-    }
+//    @Benchmark
+//    public Boolean deserializeTrueBenchmark(StateObj stateObj) throws DeserializationException {
+//        return stateObj.deserializer.deserialize(stateObj.trueUTF8);
+//    }
 
     @Benchmark
-    public Boolean deserializeSafeTrueBenchmark(StateObj stateObj) throws DeserializationException {
+    public Boolean deserializeTrueSafeBenchmark(StateObj stateObj) throws DeserializationException {
         return stateObj.deserializer.deserializeSafe(stateObj.trueUTF8);
     }
 
+//    @Benchmark
+//    public Boolean deserializeFalseBenchmark(StateObj stateObj) throws DeserializationException {
+//        return stateObj.deserializer.deserialize(stateObj.falseUTF8);
+//    }
+//
     @Benchmark
-    public Boolean deserializeFalseBenchmark(StateObj stateObj) throws DeserializationException {
-        return stateObj.deserializer.deserialize(stateObj.falseUTF8);
-    }
-
-    @Benchmark
-    public Boolean deserializeSafeFalseBenchmark(StateObj stateObj) throws DeserializationException {
+    public Boolean deserializeFalseSafeBenchmark(StateObj stateObj) throws DeserializationException {
         return stateObj.deserializer.deserializeSafe(stateObj.falseUTF8);
     }
-
+//
+//    @Benchmark
+//    public Boolean deserializeNullBenchmark(StateObj stateObj) throws DeserializationException {
+//        return stateObj.deserializer.deserialize(stateObj.nullUTF8);
+//    }
+//
     @Benchmark
-    public Boolean deserializeJacksonTrueBenchmark(StateObj stateObj) throws DeserializationException {
-        int ptr = 1;
-        if ((ptr + 3) < stateObj.falseUTF8.length) {
-            byte[] buf = stateObj.trueUTF8;
-            if ((buf[ptr++] == 'r')
-                    && (buf[ptr++] == 'u')
-                    && (buf[ptr] == 'e')) {
-                int ch = buf[ptr] ^ 0x49; // XOR operation that will always give true to emulate the jackson serializer.
-                if (ch < '0' || (ch == ']') || (ch == '}')) { // expected/allowed chars
-                    stateObj.dummyJacksonPointer = ptr;
-                    return true;
-                }
-            }
-        }
-        throw new DeserializationException("The jackson benchmark failed, check it");
+    public Boolean deserializeNullSafeBenchmark(StateObj stateObj) throws DeserializationException {
+        return stateObj.deserializer.deserializeSafe(stateObj.nullUTF8);
+    }
+//
+    @Benchmark
+    public Boolean deserializeTrueIfBenchmark(StateObj stateObj) throws DeserializationException {
+        return stateObj.deserializer.deserializeIf(stateObj.trueUTF8);
     }
 
     @Benchmark
-    public Boolean deserializeJacksonFalseBenchmark(StateObj stateObj) throws DeserializationException {
-        int ptr = 1;
-        if ((ptr + 4) < stateObj.falseUTF8.length+1) {
-            byte[] buf = stateObj.falseUTF8;
-            if ((buf[ptr++] == 'a')
-                    && (buf[ptr++] == 'l')
-                    && (buf[ptr++] == 's')
-                    && (buf[ptr] == 'e')) {
-                int ch = buf[ptr] ^ 0x49;
-                if (ch < '0' || (ch == ']') || (ch == '}')) { // expected/allowed chars
-                    stateObj.dummyJacksonPointer = ptr;
-                    return false;
-                }
-            }
-        }
-        throw new DeserializationException("The jackson benchmark failed, check it");
+    public Boolean deserializeFalseIfBenchmark(StateObj stateObj) throws DeserializationException {
+        return stateObj.deserializer.deserializeIf(stateObj.falseUTF8);
     }
+
+    @Benchmark
+    public Boolean deserializeNullIfBenchmark(StateObj stateObj) throws DeserializationException {
+        return stateObj.deserializer.deserializeIf(stateObj.nullUTF8);
+    }
+//
+//    @Benchmark
+//    public Boolean deserializeTrueJacksonBenchmark(StateObj stateObj) throws DeserializationException {
+//        int ptr = 1;
+//        if ((ptr + 3) < stateObj.falseUTF8.length) {
+//            byte[] buf = stateObj.trueUTF8;
+//            if ((buf[ptr++] == 'r')
+//                    && (buf[ptr++] == 'u')
+//                    && (buf[ptr] == 'e')) {
+//                int ch = buf[ptr] ^ 0x49; // XOR operation that will always give true to emulate the jackson serializer.
+//                if (ch < '0' || (ch == ']') || (ch == '}')) { // expected/allowed chars
+//                    stateObj.dummyJacksonPointer = ptr;
+//                    return true;
+//                }
+//            }
+//        }
+//        return throwException("The jackson benchmark failed, check it");
+//    }
+//
+//    @Benchmark
+//    public Boolean deserializeFalseJacksonBenchmark(StateObj stateObj) throws DeserializationException {
+//        int ptr = 1;
+//        if ((ptr + 4) < stateObj.falseUTF8.length+1) {
+//            byte[] buf = stateObj.falseUTF8;
+//            if ((buf[ptr++] == 'a')
+//                    && (buf[ptr++] == 'l')
+//                    && (buf[ptr++] == 's')
+//                    && (buf[ptr] == 'e')) {
+//                int ch = buf[ptr] ^ 0x49;
+//                if (ch < '0' || (ch == ']') || (ch == '}')) { // expected/allowed chars
+//                    stateObj.dummyJacksonPointer = ptr;
+//                    return false;
+//                }
+//            }
+//        }
+//        return throwException("The jackson benchmark failed, check it");
+//    }
+//
+//    @Benchmark
+//    public Boolean deserializeNullJacksonBenchmark(StateObj stateObj) throws DeserializationException {
+//        int ptr = 1;
+//        if ((ptr + 3) < stateObj.falseUTF8.length) {
+//            byte[] buf = stateObj.nullUTF8;
+//            if ((buf[ptr++] == 'u')
+//                    && (buf[ptr++] == 'l')
+//                    && (buf[ptr] == 'l')) {
+//                int ch = buf[ptr] ^ 0x49; // XOR operation that will always give true to emulate the jackson serializer.
+//                if (ch < '0' || (ch == ']') || (ch == '}')) { // expected/allowed chars
+//                    stateObj.dummyJacksonPointer = ptr;
+//                    return null;
+//                }
+//            }
+//        }
+//        return throwException("The jackson benchmark failed, check it");
+//    }
+//
+//    @Benchmark
+//    public Boolean deserializeTrueJavaBenchmark() {
+//        return Boolean.getBoolean("true");
+//    }
+//
+//    @Benchmark
+//    public Boolean deserializeFalseJavaBenchmark() {
+//        return Boolean.getBoolean("false");
+//    }
+
+//    private Boolean throwException(String errMsg) throws DeserializationException {
+//        throw new DeserializationException(errMsg);
+//    }
 
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
@@ -90,9 +147,9 @@ public class LiteralDeserializerBenchmark {
                 .warmupIterations(5)
                 .measurementIterations(10)
                 .measurementTime(new TimeValue(5, TimeUnit.SECONDS))
-                .output("output/results")
+//                .output("output/results-literal-if")
                 .threads(1)
-                .addProfiler(AsyncProfiler.class, "dir=profile-results;libPath=/home/carlos/Java_Tools/async-profiler-2.7-arg-linux-x64/build/libasyncProfiler.so")
+//                .addProfiler(AsyncProfiler.class, "dir=profile-results;libPath=/home/carlos/Java_Tools/async-profiler-2.7-arg-linux-x64/build/libasyncProfiler.so")
                 .build();
         new Runner(opt).run();
     }

@@ -4,7 +4,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
-mainClassName = 'kr.sanchez.specdeser.benchmark.LiteralDeserializerBenchmark'
+mainClassName = 'kr.sanchez.specdeser.benchmark.TruffleBenchmark'
 
 group 'kr.sanchez.specdeser'
 version '0.1'
@@ -22,6 +22,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 
+    implementation group:'com.fasterxml.jackson.core', name:'jackson-core', version:'2.13.1'
     implementation group: 'org.openjdk.jmh', name: 'jmh-core', version: "${jmhVersion}"
     annotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: "${jmhVersion}"
 }

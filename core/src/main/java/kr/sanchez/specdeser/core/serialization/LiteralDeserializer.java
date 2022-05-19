@@ -52,8 +52,19 @@ public class LiteralDeserializer extends AbstractSpeculativeDeserializer<Boolean
             }
     }
 
+    public Boolean deserializeIf(byte[] inputArray) throws DeserializationException {
+        if (inputArray[0] == 't') {
+            return trueDeserializer(inputArray);
+        } if (inputArray[0] == 'f') {
+            return falseDeserializer(inputArray);
+        } if (inputArray[0] == 'n') {
+            return nullDeserializer(inputArray);
+        }
+        return throwDeserializationException("The received byte array does not represent a literal value");
+    }
+
     public Boolean deserializeSafe(byte[] inputArray) throws DeserializationException {
-        switch (inputArray[0]) {
+        switch (inputArray[0]) { // Switch compiles to a table if you're lucky. If not, to a hash (really expensive)
             case 't' -> {
                 return trueDeserializer(inputArray);
             }
@@ -63,7 +74,40 @@ public class LiteralDeserializer extends AbstractSpeculativeDeserializer<Boolean
             case 'n' -> {
                 return nullDeserializer(inputArray);
             }
-            default -> throw new DeserializationException("The received byte array does not represent a literal value");
+            default -> {
+                return throwDeserializationException("The received byte array does not represent a literal value");
+            }
+        }
+
+    }
+
+    public Boolean deserializeIf2(byte[] inputArray) throws DeserializationException {
+        int inp = inputArray[0];
+        if (inp == 't') {
+            return trueDeserializer(inputArray);
+        } if (inp == 'f') {
+            return falseDeserializer(inputArray);
+        } if (inp == 'n') {
+            return nullDeserializer(inputArray);
+        }
+        return throwDeserializationException("The received byte array does not represent a literal value");
+    }
+
+    public Boolean deserializeSafe2(byte[] inputArray) throws DeserializationException {
+        int inp = inputArray[0];
+        switch (inp) { // Switch compiles to a table if you're lucky. If not, to a hash (really expensive)
+            case 't' -> {
+                return trueDeserializer(inputArray);
+            }
+            case 'f' -> {
+                return falseDeserializer(inputArray);
+            }
+            case 'n' -> {
+                return nullDeserializer(inputArray);
+            }
+            default -> {
+                return throwDeserializationException("The received byte array does not represent a literal value");
+            }
         }
 
     }
@@ -71,12 +115,12 @@ public class LiteralDeserializer extends AbstractSpeculativeDeserializer<Boolean
     private Boolean trueDeserializer(byte[] inputArray) throws DeserializationException {
         int idx = 1;
         if (inputArray.length == 4 &&
-            inputArray[idx++] == 'r' &&
+            inputArray[idx++] == 'r' && // Under the hood it checks OutOfBounds
             inputArray[idx++] == 'u' &&
             inputArray[idx] == 'e') {
                 return true;
         }
-        throw new DeserializationException("The received byte array does not represent a literal value");
+        return throwDeserializationException("The received byte array does not represent a literal value"); // This is really expensive in Java
     }
 
     private Boolean falseDeserializer(byte[] inputArray) throws DeserializationException {
@@ -88,7 +132,7 @@ public class LiteralDeserializer extends AbstractSpeculativeDeserializer<Boolean
                 inputArray[idx] == 'e') {
             return false;
         }
-        throw new DeserializationException("The received byte array does not represent a literal value");
+        return throwDeserializationException("The received byte array does not represent a literal value");
     }
 
     private Boolean nullDeserializer(byte[] inputArray) throws DeserializationException {
@@ -99,7 +143,11 @@ public class LiteralDeserializer extends AbstractSpeculativeDeserializer<Boolean
                 inputArray[idx] == 'l') {
             return null;
         }
-        throw new DeserializationException("The received byte array does not represent a literal value");
+        return throwDeserializationException("The received byte array does not represent a literal value");
+    }
+
+    private Boolean throwDeserializationException(String msg) throws DeserializationException {
+        throw new DeserializationException(msg);
     }
 
 }

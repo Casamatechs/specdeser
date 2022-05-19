@@ -45,7 +45,7 @@ sudo sysctl kernel.kptr_restrict=0
 
 # Here goes the benchmark
 
-sudo cset shield --exec -- perf stat ./runBenchmark
+sudo env "GRAAL_COMPILER=$GRAAL_COMPILER" cset shield --exec -- perf stat ./runBenchmark
 
 ### REVERSE CHANGES ###
 sudo sysctl kernel.kptr_restrict=1
