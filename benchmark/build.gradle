@@ -4,7 +4,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
-mainClassName = 'kr.sanchez.specdeser.benchmark.TruffleBenchmark'
+mainClassName = 'kr.sanchez.specdeser.benchmark.TestBenchmark'
 
 group 'kr.sanchez.specdeser'
 version '0.1'

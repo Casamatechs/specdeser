@@ -705,15 +705,20 @@ public class IntrinsicJakartaParser implements JsonParser {
      *
      * @return
      */
-    private boolean fastNaturalNumberCheck() { // TODO: Fix this, extremely slow.
-        try {
-            long val = ByteBuffer.wrap(this.inputBuffer, this.ptrBuff, 8).getLong();
-            return (((val & 0xF0F0F0F0F0F0F0F0L) |
-                    (((val + 0x0606060606060606L) & 0xF0F0F0F0F0F0F0F0L) >> 4)) ==
-                    0x3333333333333333L);
-        } catch (IndexOutOfBoundsException e) {
-            return false;
+    private boolean fastNaturalNumberCheck() { // TODO: This method should be replaced by an intrinsic
+        for (int i = 0; i < 8; i++) {
+            int number = this.inputBuffer[this.ptrBuff+i] - '0';
+            if (number < 0 || number > 9) return false;
         }
+        return true;
+//        try {
+//            long val = ByteBuffer.wrap(this.inputBuffer, this.ptrBuff, 8).getLong();
+//            return (((val & 0xF0F0F0F0F0F0F0F0L) |
+//                    (((val + 0x0606060606060606L) & 0xF0F0F0F0F0F0F0F0L) >> 4)) ==
+//                    0x3333333333333333L);
+//        } catch (IndexOutOfBoundsException e) {
+//            return false;
+//        }
     }
 
     private boolean slowNumberCheck() {
