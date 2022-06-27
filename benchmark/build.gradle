@@ -1,10 +1,11 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
+//    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'me.champeau.jmh' version '0.6.6'
 }
 
-mainClassName = 'kr.sanchez.specdeser.benchmark.TestBenchmark'
+mainClassName = 'kr.sanchez.specdeser.benchmark.JakartaBenchmark'
 
 group 'kr.sanchez.specdeser'
 version '0.1'
@@ -14,20 +15,61 @@ repositories {
 }
 
 ext {
-    jmhVersion = '1.33'
+    jmhVersion = '1.34'
+    asyncProfilerPath = '/home/carlos/Java_Tools/async-profiler-2.7-arg-linux-x64/build/libasyncProfiler.so'
+    HEAP_SIZE = '2g'
 }
 
 dependencies {
-    implementation project(':core')
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    jmh project(':core')
+//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 
-    implementation group:'com.fasterxml.jackson.core', name:'jackson-core', version:'2.13.1'
-    implementation group: 'org.openjdk.jmh', name: 'jmh-core', version: "${jmhVersion}"
-    annotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: "${jmhVersion}"
+    jmh group:'jakarta.json', name:'jakarta.json-api', version:'1.1.6'
+    jmh group: 'org.eclipse', name: 'yasson', version: '1.0.8'
+    jmh group:'com.fasterxml.jackson.core', name:'jackson-core', version:'2.13.1'
+    jmh group: 'org.openjdk.jmh', name: 'jmh-core', version: "${jmhVersion}"
+    jmh group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: "${jmhVersion}"
 }
 
-shadowJar {
+jmh {
+    includes = ['.parser[SameKey]*1000Number.',]
+//    jvm = '/home/carlos/Documents/Thesis/Code/graal/sdk/mxbuild/linux-amd64/GRAALJDK_CE_71C25D3E58_JAVA17/graaljdk-ce-71c25d3e58-java17-22.2.0-dev/bin/java'
+    jvmArgs = [
+            '-server',
+            // Debug flags
+//            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005",
+            // GraalVM Flags
+            "-Dgraal.CompilationFailureAction=Diagnose",
+            "-Dgraal.DumpOnError=true",
+            "-Dgraal.ShowDumpFiles=true",
+            "-Dgraal.PrintGraph=Network",
+            "-Dgraal.ObjdumpExecutables=objdump,gobjdump",
+            "-Dgraalvm.locatorDisabled=true",
+            // JVM Flags
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:+EnableJVMCI",
+            "-XX:+UseJVMCICompiler",
+            "-XX:AutoBoxCacheMax=20000",
+            "-XX:+UseBiasedLocking",
+            "-XX:BiasedLockingStartupDelay=500",
+            "-Xms${HEAP_SIZE}",
+            "-Xmx${HEAP_SIZE}",
+            // Graal Compiling Graphs
+            '-Dgraal.Dump=:2',
+            '-Dgraal.MethodFilter=kr.sanchez.specdeser.core.jakarta.*.*,org.glassfish.json.*.*,com.fasterxml.jackson.core.UTF8StreamJsonParser.*'
+            ]
+    benchmarkMode = ['thrpt']
+    fork = 1
+//    warmupIterations = 15
+//    warmup = '5s'
+//    iterations = 5
+//    timeOnIteration = '10s'
+    threads = 1
+    profilers = ["async:libPath=${asyncProfilerPath}"]
+}
+
+jmhJar {
     archiveName = 'specdeser-benchmark.jar'
     exclude 'META-INF/*.SF'
     exclude 'META-INF/*.DSA'

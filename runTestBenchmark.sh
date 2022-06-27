@@ -5,22 +5,16 @@ HEAP_SIZE=2g
 
 [ -z ${JVM_OPTIONS} ] && JVM_OPTIONS="-XX:AutoBoxCacheMax=20000 -XX:+UseBiasedLocking -XX:BiasedLockingStartupDelay=500 -Xms${HEAP_SIZE} -Xmx${HEAP_SIZE}"
 [ -z ${SEED} ] && export SEED=${RANDOM}
-[ -z ${SHADOW} ] && echo ./gradlew clean build shadowJar && ./gradlew clean build shadowJar
+[ -z ${SHADOW} ] && echo ./gradlew clean build shadowJar && ./gradlew clean jmhJar
 
 #echo "Running benchmark with Oracle JDK"
-#/home/carlos/Oracle-JDK17/bin/java ${JVM_OPTIONS} -jar ${JAR} $*
+#/home/carlos/Oracle-JDK17/bin/java ${JVM_OPTIONS} \
+# -XX:-TieredCompilation \
+# -jar ${JAR} $*
 echo "Running benchmark with GraalVM"
 exec mx -p $GRAAL_COMPILER -v vm ${JVM_OPTIONS} \
+ -XX:+UnlockDiagnosticVMOptions \
  -XX:-TieredCompilation \
- -Dgraal.Dump=:2 \
- -Dgraal.MethodFilter=kr.sanchez.specdeser.benchmark.TestBenchmark.parseNumbers1,kr.sanchez.specdeser.benchmark.TestBenchmark.parseNumbers2 \
  -jar ${JAR} -Djmh.ignoreLock=true $*
-# -XX:CompileOnly=kr.sanchez.specdeser.core.serialization.LiteralDeserializer \
-#-XX:+UnlockExperimentalVMOptions \
-#                           -XX:+EnableJVMCI \
-#                           -XX:+UseJVMCICompiler \
-#                           -XX:-TieredCompilation \
-#                           -Dgraal.Dump \
-#                           -XX:+UnlockDiagnosticVMOptions \
-#                           -XX:+LogCompilation \
-# ,org.graalvm.truffle/com.oracle.truffle.api=ALL-UNNAMED,org.graalvm.truffle/com.oracle.truffle.api.nodes=ALL-UNNAMED,org.graalvm.truffle/com.oracle.truffle.api.frame=ALL-UNNAMED \
+# -Dgraal.Dump=:2 \
+# -Dgraal.MethodFilter=kr.sanchez.specdeser.core.jakarta.*.*,org.glassfish.json.*.* \

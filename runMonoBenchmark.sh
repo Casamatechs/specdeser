@@ -7,11 +7,6 @@
 #    exit 1
 #fi
 
-# We need to touch many different settings in the system that require superuser privileges,
-# but will try to figure out if there's a way to avoid it.
-
-#read -s -p "Enter Password for sudo: " sudoPW
-
 # Disable ASLR. This will avoid random memory allocation during benchmarking
 # but also enables side-channel attacks.
 sudo bash -c "echo 0 > /proc/sys/kernel/randomize_va_space"
@@ -45,7 +40,8 @@ sudo sysctl kernel.kptr_restrict=0
 
 # Here goes the benchmark
 
-sudo env "GRAAL_COMPILER=$GRAAL_COMPILER" cset shield --exec -- perf stat ./runBenchmark
+#sudo env "GRAAL_COMPILER=$GRAAL_COMPILER" cset shield --exec -- perf stat ./runTestBenchmark.sh
+sudo env "GRAAL_COMPILER=$GRAAL_COMPILER" ./gradlew clean jmh
 
 ### REVERSE CHANGES ###
 sudo sysctl kernel.kptr_restrict=1
