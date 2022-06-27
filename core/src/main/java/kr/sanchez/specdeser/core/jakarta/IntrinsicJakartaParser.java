@@ -19,30 +19,25 @@ import java.util.stream.Stream;
 public class IntrinsicJakartaParser implements JsonParser {
 
     private final static int BUFFER_SIZE = 65536; // TODO
-
+    //    private final byte[] auxBuffer = new byte[BUFFER_SIZE]; // TODO: This buffer will be used to store values when reading the stream again.
+    private final ContextStack<ContextParser> contextStack;
     private Event currentEvent;
     private InputStream inputStream;
     private byte[] inputBuffer = new byte[BUFFER_SIZE];
-//    private final byte[] auxBuffer = new byte[BUFFER_SIZE]; // TODO: This buffer will be used to store values when reading the stream again.
-    private final ContextStack<ContextParser> contextStack;
     private int ptrBuff;
     private int endBuff;
 
     private int beginValuePtr;
     private int endValuePtr;
 
-    private long col;
-    private long line;
+    private final long col;
+    private final long line;
 
     private NumberType numType;
-
-    private enum NumberType {
-        INT,
-        DOUBLE,
-        EXP
-    }
-
+    private boolean minus;
+    private boolean valueContext = false;
     public IntrinsicJakartaParser(byte[] inputBuffer) {
+        this.minus = false;
         this.inputStream = null;
         this.ptrBuff = 0;
         this.endBuff = inputBuffer.length;
@@ -53,6 +48,7 @@ public class IntrinsicJakartaParser implements JsonParser {
     }
 
     public IntrinsicJakartaParser(InputStream inputStream) throws IOException {
+        this.minus = false;
         this.inputStream = inputStream;
         this.ptrBuff = 0;
         this.endBuff = 0;
@@ -109,6 +105,7 @@ public class IntrinsicJakartaParser implements JsonParser {
     public Event next() {
         if (this.inputBuffer[this.ptrBuff] == '{') {
             this.contextStack.push(ContextParser.OBJECT_CONTEXT);
+            this.valueContext = false;
             this.ptrBuff++;
             skipWS();
             return (this.currentEvent = Event.START_OBJECT);
@@ -116,6 +113,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         if (this.inputBuffer[this.ptrBuff] == '}') {
             if (this.contextStack.peek() == ContextParser.OBJECT_CONTEXT) {
                 this.contextStack.pop();
+                this.valueContext = true;
                 this.ptrBuff++;
                 if (this.ptrBuff < this.endBuff) {
                     checkLastValueContext();
@@ -127,6 +125,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         }
         if (this.inputBuffer[this.ptrBuff] == '[') {
             this.contextStack.push(ContextParser.ARRAY_CONTEXT);
+            this.valueContext = false;
             this.ptrBuff++;
             skipWS();
             return (this.currentEvent = Event.START_ARRAY);
@@ -134,6 +133,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         if (this.inputBuffer[this.ptrBuff] == ']') {
             if (this.contextStack.peek() == ContextParser.ARRAY_CONTEXT) {
                 this.contextStack.pop();
+                this.valueContext = true;
                 this.ptrBuff++;
                 if (this.ptrBuff < this.endBuff) {
                     checkLastValueContext();
@@ -145,15 +145,17 @@ public class IntrinsicJakartaParser implements JsonParser {
         }
         if (this.inputBuffer[this.ptrBuff] == ':') {
             if (this.currentEvent == Event.KEY_NAME) {
-                this.contextStack.push(ContextParser.VALUE_CONTEXT);
+                this.valueContext = true;
+//                this.contextStack.push(ContextParser.VALUE_CONTEXT);
                 this.ptrBuff++;
                 skipWS();
                 return next();
             }
         }
         if (this.inputBuffer[this.ptrBuff] == ',') {
-            if (this.contextStack.peek() == ContextParser.VALUE_CONTEXT && isValueEvent()) {
-                this.contextStack.pop();
+            if (this.valueContext && isValueEvent()) {
+//                this.contextStack.pop();
+                this.valueContext = false;
                 this.ptrBuff++;
                 this.currentEvent = null;
                 skipWS();
@@ -167,14 +169,17 @@ public class IntrinsicJakartaParser implements JsonParser {
             throwParseException();
         }
         switch (this.inputBuffer[this.ptrBuff]) {
-            case '0','1','2','3','4','5','6','7','8','9' -> {
+            case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
                 this.beginValuePtr = this.ptrBuff;
+                this.minus = false;
                 processNumber();
                 this.currentEvent = Event.VALUE_NUMBER;
             }
             case '-' -> {
-                this.beginValuePtr = this.ptrBuff;
-                processNegativeNumber();
+//                this.beginValuePtr = this.ptrBuff;
+                this.minus = true;
+                this.beginValuePtr = ++this.ptrBuff;
+                processNumber();
                 this.currentEvent = Event.VALUE_NUMBER;
             }
             case 't' -> {
@@ -195,20 +200,23 @@ public class IntrinsicJakartaParser implements JsonParser {
             case '"' -> {
                 this.ptrBuff++; // We want to skip the " character as is only a delimiter
                 processString();
-                if (this.contextStack.peek() == ContextParser.OBJECT_CONTEXT) {
-                    this.currentEvent = Event.KEY_NAME;
-                } else {
+                if (this.valueContext ||
+                        this.contextStack.peek() == ContextParser.ARRAY_CONTEXT ||
+                        this.contextStack.isEmpty()) {
                     this.currentEvent = Event.VALUE_STRING;
+                } else if (this.contextStack.peek() == ContextParser.OBJECT_CONTEXT) {
+                    this.currentEvent = Event.KEY_NAME;
                 }
             }
             default -> {
                 skipWS();
-                if (this.ptrBuff < this.endBuff-1) throwParseException();
+                if (this.ptrBuff < this.endBuff - 1) throwParseException();
             }
         }
         skipWS();
-        if (this.contextStack.peek() == ContextParser.VALUE_CONTEXT && this.inputBuffer[this.ptrBuff] != ',') {
-            this.contextStack.pop();
+        if (this.valueContext && this.inputBuffer[this.ptrBuff] != ',') {
+//            this.contextStack.pop();
+            this.valueContext = false;
         }
         return this.currentEvent;
     }
@@ -280,7 +288,31 @@ public class IntrinsicJakartaParser implements JsonParser {
         if (this.currentEvent != Event.VALUE_NUMBER) {
             throw new IllegalStateException();
         }
-        return new BigDecimal(this.getString()).intValue();
+        int ret = 0;
+        int beginPtr = this.beginValuePtr;
+        if (this.numType == NumberType.EXP) {
+            int exp = 0;
+            int expRet = 1;
+            while (beginPtr < this.endValuePtr) {
+                byte ch = this.inputBuffer[beginPtr++];
+                if (ch == 'e' || ch == 'E') {
+                    break;
+                }
+                ret = ret * 10 + (ch - '0');
+            }
+            while (beginPtr < this.endValuePtr) {
+                exp = exp * 10 + (this.inputBuffer[beginPtr++] - '0');
+            }
+            for (int i = 1; i <= exp; i++) {
+                expRet *= 10;
+            }
+            return this.minus ? -(ret * expRet) : ret * expRet;
+        }
+        while (beginPtr < this.endValuePtr) {
+            ret = ret * 10 + (this.inputBuffer[beginPtr++] - '0');
+        }
+        return this.minus ? -ret : ret;
+//        return new BigDecimal(this.getString()).intValue(); //TODO
     }
 
     /**
@@ -301,7 +333,30 @@ public class IntrinsicJakartaParser implements JsonParser {
         if (this.currentEvent != Event.VALUE_NUMBER) {
             throw new IllegalStateException();
         }
-        return new BigDecimal(this.getString()).longValue();
+        long ret = 0;
+        int beginPtr = this.beginValuePtr;
+        if (this.numType == NumberType.EXP) {
+            int exp = 0;
+            int expRet = 1;
+            while (beginPtr < this.endValuePtr) {
+                byte ch = this.inputBuffer[beginPtr++];
+                if (ch == 'e' || ch == 'E') {
+                    break;
+                }
+                ret = ret * 10 + (ch - '0');
+            }
+            while (beginPtr < this.endValuePtr) {
+                exp = exp * 10 + (this.inputBuffer[beginPtr++] - '0');
+            }
+            for (int i = 1; i <= exp; i++) {
+                expRet *= 10;
+            }
+            return this.minus ? -(ret * expRet) : ret * expRet;
+        }
+        while (beginPtr < this.endValuePtr) {
+            ret = ret * 10 + (this.inputBuffer[beginPtr++] - '0');
+        }
+        return this.minus ? -ret : ret;
     }
 
     /**
@@ -515,11 +570,12 @@ public class IntrinsicJakartaParser implements JsonParser {
     }
 
     private void skipWS() {
-        if (this.inputStream == null && this.ptrBuff >= this.endBuff-1) return;
+        if (this.inputStream == null && this.ptrBuff >= this.endBuff - 1) return;
+        byte bt = this.inputBuffer[this.ptrBuff];
         if (this.inputBuffer[this.ptrBuff] == 0x20 ||
-            this.inputBuffer[this.ptrBuff] == 0x09 ||
-            this.inputBuffer[this.ptrBuff] == 0x0A ||
-            this.inputBuffer[this.ptrBuff] == 0x0D) {
+                this.inputBuffer[this.ptrBuff] == 0x09 ||
+                this.inputBuffer[this.ptrBuff] == 0x0A ||
+                this.inputBuffer[this.ptrBuff] == 0x0D) {
             this.ptrBuff++;
             if (this.inputStream != null && this.ptrBuff == this.endBuff) {
                 this.ptrBuff = 0;
@@ -542,25 +598,25 @@ public class IntrinsicJakartaParser implements JsonParser {
 
     private void processTrue() {
         if (this.inputBuffer[++this.ptrBuff] != 'r' ||
-            this.inputBuffer[++this.ptrBuff] != 'u' ||
-            this.inputBuffer[++this.ptrBuff] != 'e') {
+                this.inputBuffer[++this.ptrBuff] != 'u' ||
+                this.inputBuffer[++this.ptrBuff] != 'e') {
             throwParseException();
         }
     }
 
     private void processFalse() {
         if (this.inputBuffer[++this.ptrBuff] != 'a' ||
-            this.inputBuffer[++this.ptrBuff] != 'l' ||
-            this.inputBuffer[++this.ptrBuff] != 's' ||
-            this.inputBuffer[++this.ptrBuff] != 'e') {
+                this.inputBuffer[++this.ptrBuff] != 'l' ||
+                this.inputBuffer[++this.ptrBuff] != 's' ||
+                this.inputBuffer[++this.ptrBuff] != 'e') {
             throwParseException();
         }
     }
 
     private void processNull() {
         if (this.inputBuffer[++this.ptrBuff] != 'u' ||
-            this.inputBuffer[++this.ptrBuff] != 'l' ||
-            this.inputBuffer[++this.ptrBuff] != 'l') {
+                this.inputBuffer[++this.ptrBuff] != 'l' ||
+                this.inputBuffer[++this.ptrBuff] != 'l') {
             throwParseException();
         }
     }
@@ -569,12 +625,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         while (fastNaturalNumberCheck()) {
             this.ptrBuff += 8;
         }
-        while (slowNumberCheck());
-    }
-
-    private void processNegativeNumber() { // TODO: Replace this function with a more specific one
-        this.beginValuePtr = this.ptrBuff++;
-        processNumber();
+        while (slowNumberCheck()) ;
     }
 
     private void processString() {
@@ -586,15 +637,13 @@ public class IntrinsicJakartaParser implements JsonParser {
             if (ch == '"') {
                 break;
             }
-            if (isCharUnscaped(ch)){
+            if (isCharUnscaped(ch)) {
                 this.endValuePtr++;
-            }
-            else if (ch == 0x5c) {
+            } else if (ch == 0x5c) {
                 readEscaped = true;
                 processEscapedChar();
                 continueEscapedProcess();
-            }
-            else if (ch < 0){ // Multiple byte UTF-8 encoding. TODO: Check every byte is correct (must be done with the intrinsic)
+            } else if (ch < 0) { // Multiple byte UTF-8 encoding. TODO: Check every byte is correct (must be done with the intrinsic)
                 ch = (byte) ((ch & 0xFF) >>> 3);
                 if (ch >= 24 && ch < 28) processNBytes(2);
                 else if (ch < 30) processNBytes(3);
@@ -604,8 +653,13 @@ public class IntrinsicJakartaParser implements JsonParser {
         }
     }
 
+//    private void processNegativeNumber() {// TODO: Replace this function with a more specific one
+//        this.beginValuePtr = this.ptrBuff++;
+//        processNumber();
+//    }
+
     private void processNBytes(int n) {
-        this.ptrBuff += n-1;
+        this.ptrBuff += n - 1;
         this.endValuePtr += n;
     }
 
@@ -622,25 +676,23 @@ public class IntrinsicJakartaParser implements JsonParser {
             if (ch == '"') {
                 return;
             }
-            if (isCharUnscaped(ch)){
+            if (isCharUnscaped(ch)) {
                 this.inputBuffer[this.endValuePtr++] = ch;
-            }
-            else if (ch == 0x5c) {
+            } else if (ch == 0x5c) {
                 processEscapedChar();
-            } else if (ch < 0){ // Multiple byte UTF-8 encoding. TODO: Check every byte is correct (must be done with the intrinsic)
+            } else if (ch < 0) { // Multiple byte UTF-8 encoding. TODO: Check every byte is correct (must be done with the intrinsic)
                 ch = (byte) ((ch & 0xFF) >>> 3);
                 if (ch >= 24 && ch < 28) processNBytesEscaped(2);
                 else if (ch < 30) processNBytesEscaped(3);
                 else if (ch == 30) processNBytesEscaped(4);
                 else throwParseException();
-            }
-            else System.out.println("Unsupported byte");
+            } else System.out.println("Unsupported byte");
         }
     }
 
     private void processEscapedChar() {
         byte ch2 = this.inputBuffer[this.ptrBuff++];
-        switch(ch2) {
+        switch (ch2) {
             case 'b' -> this.inputBuffer[this.endValuePtr++] = '\b';
             case 't' -> this.inputBuffer[this.endValuePtr++] = '\t';
             case 'n' -> this.inputBuffer[this.endValuePtr++] = '\n';
@@ -664,7 +716,7 @@ public class IntrinsicJakartaParser implements JsonParser {
 
     private void processExtendedChar() { // TODO: Check how to do this correctly, not relying on expensive methods.
         char c1 = buildUnicodeChar();
-        if (this.inputBuffer[this.ptrBuff] != 0x5c || this.inputBuffer[this.ptrBuff+1] != 'u') { // We dont want to move the pointer in case there's not a second unicode character
+        if (this.inputBuffer[this.ptrBuff] != 0x5c || this.inputBuffer[this.ptrBuff + 1] != 'u') { // We dont want to move the pointer in case there's not a second unicode character
             String str = String.valueOf(c1);
             byte[] st = str.getBytes(StandardCharsets.UTF_8);
             for (byte b : st) {
@@ -673,7 +725,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         } else {
             this.ptrBuff += 2; // We skip the escape and unicode indicator
             char c2 = buildUnicodeChar();
-            String str = new String(new char[]{c1,c2});
+            String str = new String(new char[]{c1, c2});
             byte[] st = str.getBytes(StandardCharsets.UTF_8);
             for (byte b : st) {
                 this.inputBuffer[this.endValuePtr++] = b;
@@ -699,12 +751,11 @@ public class IntrinsicJakartaParser implements JsonParser {
     }
 
     /**
-     *
      * @return
      */
     private boolean fastNaturalNumberCheck() { // TODO: This method should be replaced by an intrinsic
         for (int i = 0; i < 8; i++) {
-            int number = this.inputBuffer[this.ptrBuff+i] - '0';
+            int number = this.inputBuffer[this.ptrBuff + i] - '0';
             if (number < 0 || number > 9) return false;
         }
         return true;
@@ -727,13 +778,15 @@ public class IntrinsicJakartaParser implements JsonParser {
         if (((ch - '0') & 0xFF) <= 9) {
             this.ptrBuff++;
             return true;
-        } if (ch == '.') {
+        }
+        if (ch == '.') {
             this.numType = NumberType.DOUBLE;
             this.ptrBuff++;
             processNumber2();
             this.endValuePtr = this.ptrBuff;
             return false; // The invocation to processFloatingNumber will take care of iterating until the end of the number.
-        } if (ch == 'e' || ch == 'E') {
+        }
+        if (ch == 'e' || ch == 'E') {
             this.numType = NumberType.EXP;
             this.ptrBuff++;
             processNumber2();
@@ -747,8 +800,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         } else if (ch == '}' || ch == ']') {
             this.numType = NumberType.INT;
             this.endValuePtr = this.ptrBuff;
-        }
-        else{
+        } else {
             throwParseException();
         }
         return false;
@@ -764,9 +816,16 @@ public class IntrinsicJakartaParser implements JsonParser {
 
     private void checkLastValueContext() {
         skipWS();
-        if (this.inputBuffer[this.ptrBuff] != ',' && this.contextStack.peek() == ContextParser.VALUE_CONTEXT) {
-            this.contextStack.pop();
+        if (this.inputBuffer[this.ptrBuff] != ',' && this.valueContext) {
+//            this.contextStack.pop();
+            this.valueContext = false;
         }
+    }
+
+    private enum NumberType {
+        INT,
+        DOUBLE,
+        EXP
     }
 
 }
