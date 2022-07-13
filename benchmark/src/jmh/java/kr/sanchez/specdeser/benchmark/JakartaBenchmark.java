@@ -3,7 +3,7 @@ package kr.sanchez.specdeser.benchmark;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import kr.sanchez.specdeser.core.jakarta.IntrinsicJakartaParser;
+import kr.sanchez.specdeser.core.jakarta.FallbackParser;
 import org.glassfish.json.JsonParserImpl;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
@@ -35,27 +35,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class JakartaBenchmark {
 
-//    public static void main(String[] args) throws RunnerException {
-//        Options opt = new OptionsBuilder()
-//                .include(JakartaBenchmark.class.getSimpleName())
-//                .warmupForks(2)
-//                .forks(1)
-//                .warmupIterations(15)
-//                .measurementIterations(5)
-//                .warmupTime(new TimeValue(5, TimeUnit.SECONDS))
-//                .measurementTime(new TimeValue(10, TimeUnit.SECONDS))
-//                .output("output/parser-".concat(String.valueOf(Date.from(Instant.now()).getTime())))
-//                .result("result/parser-".concat(String.valueOf(Date.from(Instant.now()).getTime())))
-//                .threads(1)
-//                .addProfiler(AsyncProfiler.class, "dir=profile-results/"+ Date.from(Instant.now()).getTime() + ";libPath=/home/carlos/Java_Tools/async-profiler-2.7-arg-linux-x64/build/libasyncProfiler.so")
-//                .build();
-//        new Runner(opt).run();
-//    }
-
     @Benchmark
     public void parser250NumberIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.number250Json);
+            FallbackParser parser = new FallbackParser(stateObj.number250Json);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -101,7 +84,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser250StringIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.text250Json);
+            FallbackParser parser = new FallbackParser(stateObj.text250Json);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) {
@@ -147,7 +130,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser500NumberIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.number500Json);
+            FallbackParser parser = new FallbackParser(stateObj.number500Json);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -193,7 +176,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser500StringIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.text500Json);
+            FallbackParser parser = new FallbackParser(stateObj.text500Json);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) {
@@ -240,7 +223,7 @@ public class JakartaBenchmark {
     @Warmup(iterations = 10, time = 5)
     public void parser1000NumberIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.number1000Json);
+            FallbackParser parser = new FallbackParser(stateObj.number1000Json);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -309,7 +292,7 @@ public class JakartaBenchmark {
     @Warmup(iterations = 10, time = 5)
     public void parserSameKey1000NumberIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.number1000SameKeyJson);
+            FallbackParser parser = new FallbackParser(stateObj.number1000SameKeyJson);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -398,7 +381,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser1000StringIntrinsic(StateObj stateObj) {
         try {
-            IntrinsicJakartaParser parser = new IntrinsicJakartaParser(stateObj.text1000Json);
+            FallbackParser parser = new FallbackParser(stateObj.text1000Json);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) {

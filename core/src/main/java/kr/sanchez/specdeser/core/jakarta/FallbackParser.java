@@ -1,11 +1,12 @@
 package kr.sanchez.specdeser.core.jakarta;
 
+import kr.sanchez.specdeser.core.jakarta.exception.InputReadException;
+
 import javax.json.JsonArray;
 import javax.json.JsonException;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import javax.json.stream.JsonLocation;
-import javax.json.stream.JsonParser;
 import javax.json.stream.JsonParsingException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,27 +17,27 @@ import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 @SuppressWarnings("JavadocReference")
-public class IntrinsicJakartaParser implements JsonParser {
+public class FallbackParser extends AbstractParser {
 
-    private final static int BUFFER_SIZE = 65536; // TODO
+    private final static int BUFFER_SIZE = 10 * 1024 * 1024; // 10MB buffer size
     //    private final byte[] auxBuffer = new byte[BUFFER_SIZE]; // TODO: This buffer will be used to store values when reading the stream again.
-    private final ContextStack<ContextParser> contextStack;
-    private Event currentEvent;
-    private InputStream inputStream;
-    private byte[] inputBuffer = new byte[BUFFER_SIZE];
-    private int ptrBuff;
-    private int endBuff;
+    final ContextStack<ContextParser> contextStack;
+    Event currentEvent;
+    InputStream inputStream;
+    byte[] inputBuffer = new byte[BUFFER_SIZE];
+    int ptrBuff;
+    int endBuff;
 
-    private int beginValuePtr;
-    private int endValuePtr;
+    int beginValuePtr;
+    int endValuePtr;
 
-    private final long col;
-    private final long line;
+    final long col;
+    final long line;
 
-    private NumberType numType;
-    private boolean minus;
-    private boolean valueContext = false;
-    public IntrinsicJakartaParser(byte[] inputBuffer) {
+    NumberType numType;
+    boolean minus;
+    boolean valueContext = false;
+    public FallbackParser(byte[] inputBuffer) {
         this.minus = false;
         this.inputStream = null;
         this.ptrBuff = 0;
@@ -47,7 +48,7 @@ public class IntrinsicJakartaParser implements JsonParser {
         this.contextStack = new ContextStack<>();
     }
 
-    public IntrinsicJakartaParser(InputStream inputStream) throws IOException {
+    public FallbackParser(InputStream inputStream) {
         this.minus = false;
         this.inputStream = inputStream;
         this.ptrBuff = 0;
@@ -79,12 +80,7 @@ public class IntrinsicJakartaParser implements JsonParser {
             return this.ptrBuff != this.endBuff - 1 || !checkWS(this.inputBuffer[this.ptrBuff]); // This means the last char is a WS
         }
         if (this.inputStream != null) {
-            try {
-                return loadIntoBuffer();
-            } catch (IOException e) {
-                throwParseException();
-                return false;
-            }
+            return loadIntoBuffer();
         } else {
             return false;
         }
@@ -149,7 +145,7 @@ public class IntrinsicJakartaParser implements JsonParser {
 //                this.contextStack.push(ContextParser.VALUE_CONTEXT);
                 this.ptrBuff++;
                 skipWS();
-                return next();
+                return this.next();
             }
         }
         if (this.inputBuffer[this.ptrBuff] == ',') {
@@ -159,12 +155,12 @@ public class IntrinsicJakartaParser implements JsonParser {
                 this.ptrBuff++;
                 this.currentEvent = null;
                 skipWS();
-                return next(); // Current event set to null
+                return this.next(); // Current event set to null
             }
             if (this.contextStack.peek() == ContextParser.ARRAY_CONTEXT && isValueEvent()) {
                 this.ptrBuff++;
                 skipWS();
-                return next();
+                return this.next();
             }
             throwParseException();
         }
@@ -312,7 +308,6 @@ public class IntrinsicJakartaParser implements JsonParser {
             ret = ret * 10 + (this.inputBuffer[beginPtr++] - '0');
         }
         return this.minus ? -ret : ret;
-//        return new BigDecimal(this.getString()).intValue(); //TODO
     }
 
     /**
@@ -408,7 +403,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public JsonObject getObject() {
-        return JsonParser.super.getObject();
+        return super.getObject();
     }
 
     /**
@@ -426,7 +421,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public JsonValue getValue() {
-        return JsonParser.super.getValue();
+        return super.getValue();
     }
 
     /**
@@ -440,7 +435,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public JsonArray getArray() {
-        return JsonParser.super.getArray();
+        return super.getArray();
     }
 
     /**
@@ -459,7 +454,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public Stream<JsonValue> getArrayStream() {
-        return JsonParser.super.getArrayStream();
+        return super.getArrayStream();
     }
 
     /**
@@ -478,7 +473,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public Stream<Map.Entry<String, JsonValue>> getObjectStream() {
-        return JsonParser.super.getObjectStream();
+        return super.getObjectStream();
     }
 
     /**
@@ -492,7 +487,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public Stream<JsonValue> getValueStream() {
-        return JsonParser.super.getValueStream();
+        return super.getValueStream();
     }
 
     /**
@@ -507,7 +502,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public void skipArray() {
-        JsonParser.super.skipArray();
+        super.skipArray();
     }
 
     /**
@@ -522,7 +517,7 @@ public class IntrinsicJakartaParser implements JsonParser {
      */
     @Override
     public void skipObject() {
-        JsonParser.super.skipObject();
+        super.skipObject();
     }
 
     /**
@@ -543,15 +538,19 @@ public class IntrinsicJakartaParser implements JsonParser {
         }
     }
 
-    private boolean loadIntoBuffer() throws IOException {
+    private boolean loadIntoBuffer() {
         if (this.inputStream != null) {
-            int readBytes = this.inputStream.read(inputBuffer, 0, BUFFER_SIZE);
-            if (readBytes > 0) {
-                this.endBuff = readBytes;
-                this.ptrBuff = 0;
-                return true;
+            try {
+                int readBytes = this.inputStream.read(inputBuffer, 0, BUFFER_SIZE);
+                if (readBytes > 0) {
+                    this.endBuff = readBytes;
+                    this.ptrBuff = 0;
+                    return true;
+                }
+                this.inputStream.close();
+            } catch (IOException e) {
+                throwInputReadException(e.getMessage());
             }
-            this.inputStream.close();
             this.inputStream = null;
             return false;
         }
@@ -560,6 +559,10 @@ public class IntrinsicJakartaParser implements JsonParser {
 
     private void throwParseException() {
         throw new JsonParsingException("Parsing error", new JsonLocationImpl(this.line, this.col));
+    }
+
+    private void throwInputReadException(String message) {
+        throw new InputReadException(message);
     }
 
     private boolean isValueEvent() {
@@ -571,19 +574,14 @@ public class IntrinsicJakartaParser implements JsonParser {
 
     private void skipWS() {
         if (this.inputStream == null && this.ptrBuff >= this.endBuff - 1) return;
-        byte bt = this.inputBuffer[this.ptrBuff];
         if (this.inputBuffer[this.ptrBuff] == 0x20 ||
                 this.inputBuffer[this.ptrBuff] == 0x09 ||
                 this.inputBuffer[this.ptrBuff] == 0x0A ||
                 this.inputBuffer[this.ptrBuff] == 0x0D) {
             this.ptrBuff++;
             if (this.inputStream != null && this.ptrBuff == this.endBuff) {
-                this.ptrBuff = 0;
-                try {
-                    loadIntoBuffer();
-                } catch (IOException e) {
-                    throwParseException();
-                }
+//                this.ptrBuff = 0;
+                loadIntoBuffer();
             }
             skipWS();
         }

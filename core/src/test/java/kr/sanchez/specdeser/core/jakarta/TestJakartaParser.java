@@ -11,71 +11,71 @@ import java.nio.charset.StandardCharsets;
 public class TestJakartaParser {
 
     @Test
-    void testNumberParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("123456789".getBytes(StandardCharsets.UTF_8)));
+    void testNumberParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("123456789".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_NUMBER) {
             Assertions.assertEquals(123456789, parser.getInt());
         }
     }
 
     @Test
-    void testNegativeParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("-123456789".getBytes(StandardCharsets.UTF_8)));
+    void testNegativeParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("-123456789".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_NUMBER) {
             Assertions.assertEquals(-123456789, parser.getInt());
         }
     }
 
     @Test
-    void testExpParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("2E6".getBytes(StandardCharsets.UTF_8)));
+    void testExpParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("2E6".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_NUMBER) {
             Assertions.assertEquals(2000000, parser.getInt());
         }
     }
 
     @Test
-    void testFloatingParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("1234.5678".getBytes(StandardCharsets.UTF_8)));
+    void testFloatingParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("1234.5678".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_NUMBER) {
             Assertions.assertEquals(1234.5678, parser.getDouble());
         }
     }
 
     @Test
-    void testStringParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("\"Pero weno willy compañero\"".getBytes(StandardCharsets.UTF_8)));
+    void testStringParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("\"Pero weno willy compañero\"".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_STRING) {
             Assertions.assertEquals("Pero weno willy compañero",parser.getString());
         }
     }
 
     @Test
-    void testTrueParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("true".getBytes(StandardCharsets.UTF_8)));
+    void testTrueParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("true".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_TRUE) {
             Assertions.assertTrue(true);
         }
     }
 
     @Test
-    void testFalseParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("false".getBytes(StandardCharsets.UTF_8)));
+    void testFalseParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("false".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_FALSE) {
             Assertions.assertFalse(false);
         }
     }
     @Test
-    void testNullParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("null".getBytes(StandardCharsets.UTF_8)));
+    void testNullParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("null".getBytes(StandardCharsets.UTF_8)));
         if (parser.next() == JsonParser.Event.VALUE_NULL) {
             Assertions.assertNull(null);
         }
     }
 
     @Test
-    void testBasicParse() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
+    void testBasicParse() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
         int i = 0;
         while(parser.hasNext()) {
             parser.next();
@@ -85,8 +85,8 @@ public class TestJakartaParser {
     }
 
     @Test
-    void testBasicJsonParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("{\"name\":\"Paco\"}".getBytes(StandardCharsets.UTF_8)));
+    void testBasicJsonParser() {
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("{\"name\":\"Paco\"}".getBytes(StandardCharsets.UTF_8)));
         while(parser.hasNext()) {
             JsonParser.Event evt = parser.next();
             System.out.println(evt);
@@ -96,28 +96,28 @@ public class TestJakartaParser {
 
     @Test
     void testBasic2JsonParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("{\"name\":\"Paco\",\"ID\":12345678}".getBytes(StandardCharsets.UTF_8)));
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("{\"name\":\"Paco\",\"ID\":12345678}".getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
 
     @Test
     void testBasic3JsonParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("{\"name\":\"Paco\",\"ID\":1234.5678,\"tweets\":123e4}".getBytes(StandardCharsets.UTF_8))); // TODO Example to use in JMH
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("{\"name\":\"Paco\",\"ID\":1234.5678,\"tweets\":123e4}".getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
 
     @Test
     void testArrayParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("[1,2,3]".getBytes(StandardCharsets.UTF_8)));
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("[1,2,3]".getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
 
     @Test
     void testArraySpacesParser() throws IOException {
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream("[1 ,\n 2,\n\n3]".getBytes(StandardCharsets.UTF_8)));
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream("[1 ,\n 2,\n\n3]".getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
@@ -134,7 +134,7 @@ public class TestJakartaParser {
                 "  \"garden\": \"send\",\n" +
                 "  \"levels\": [true, false, false]\n" +
                 "}";
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)));
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
@@ -151,7 +151,7 @@ public class TestJakartaParser {
                 "    \"separate\": \"hurry\"\n" +
                 "  }\n" +
                 "}";
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)));
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
@@ -310,7 +310,7 @@ public class TestJakartaParser {
                 "    ]\n" +
                 "  }\n" +
                 "}";
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)));
+        FallbackParser parser = new FallbackParser(new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
@@ -469,7 +469,7 @@ public class TestJakartaParser {
                 "    ]\n" +
                 "  }\n" +
                 "}\n";
-        IntrinsicJakartaParser parser = new IntrinsicJakartaParser(str.getBytes(StandardCharsets.UTF_8));
+        FallbackParser parser = new FallbackParser(str.getBytes(StandardCharsets.UTF_8));
         runParser(parser);
         Assertions.assertTrue(parser.stackEmpty());
     }
