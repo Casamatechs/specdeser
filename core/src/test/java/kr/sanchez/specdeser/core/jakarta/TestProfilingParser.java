@@ -14,9 +14,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class TestProfilingParser {
 
@@ -38,7 +36,7 @@ public class TestProfilingParser {
             runParser(parser);
             inputStream.reset();
         }
-        List collection = ProfileCollection.getProfileCollection();
+        List collection = ProfileCollection.getMetadataProfileCollection();
         List expectedValue = new ArrayList(Arrays.asList(new KeyValue("name"),
                 new StringConstant("Persona"),
                 new KeyValue("surname"),
@@ -82,7 +80,7 @@ public class TestProfilingParser {
         runParser(parser);
         parser = (ProfilingParser) AbstractParser.create(is3);
         runParser(parser);
-        List collection = ProfileCollection.getProfileCollection();
+        List collection = ProfileCollection.getMetadataProfileCollection();
         List expectedValue = new ArrayList(Arrays.asList(new KeyValue("id"),
                 new StringConstant("foo"),
                 new KeyValue("name"),

@@ -14,13 +14,14 @@ public class ProfilingParser extends AbstractParser {
 
     private final FallbackParser delegate;
 
-    private int profilingInsertionStep;
+    private int metadataProfilingStep;
+    private int eventProfilingStep;
 
     private Event currentEvent;
 
     public ProfilingParser(InputStream inputStream) {
         this.delegate = new FallbackParser(inputStream);
-        this.profilingInsertionStep = 0;
+        this.metadataProfilingStep = 0;
         this.currentEvent = null;
     }
 
@@ -31,16 +32,18 @@ public class ProfilingParser extends AbstractParser {
 
     @Override
     public Event next() {
-        return (this.currentEvent = delegate.next());
+        this.currentEvent = delegate.next();
+        ProfileCollection.addParserEvent(invocations, eventProfilingStep++, this.currentEvent);
+        return this.currentEvent;
     }
 
     @Override
     public String getString() {
         String val = delegate.getString();
         if (currentEvent == Event.KEY_NAME) {
-            ProfileCollection.addEvent(invocations, profilingInsertionStep++, new KeyValue(val));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new KeyValue(val));
         } else {
-            ProfileCollection.addEvent(invocations, profilingInsertionStep++, new StringConstant(val));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new StringConstant(val));
         }
         return val;
     }
@@ -53,14 +56,14 @@ public class ProfilingParser extends AbstractParser {
     @Override
     public int getInt() {
         int val = delegate.getInt();
-        ProfileCollection.addEvent(invocations, profilingInsertionStep++, new IntegerConstant(val));
+        ProfileCollection.addEvent(invocations, metadataProfilingStep++, new IntegerConstant(val));
         return val;
     }
 
     @Override
     public long getLong() {
         long val = delegate.getLong();
-        ProfileCollection.addEvent(invocations, profilingInsertionStep++, new LongConstant(val));
+        ProfileCollection.addEvent(invocations, metadataProfilingStep++, new LongConstant(val));
         return val;
     }
 

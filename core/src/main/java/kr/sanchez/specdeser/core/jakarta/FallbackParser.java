@@ -19,7 +19,6 @@ import java.util.stream.Stream;
 @SuppressWarnings("JavadocReference")
 public class FallbackParser extends AbstractParser {
 
-    private final static int BUFFER_SIZE = 10 * 1024 * 1024; // 10MB buffer size
     //    private final byte[] auxBuffer = new byte[BUFFER_SIZE]; // TODO: This buffer will be used to store values when reading the stream again.
     final ContextStack<ContextParser> contextStack;
     Event currentEvent;
