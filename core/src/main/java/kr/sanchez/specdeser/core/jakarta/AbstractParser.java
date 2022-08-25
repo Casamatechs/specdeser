@@ -23,6 +23,10 @@ public abstract class AbstractParser implements JsonParser {
     static int invocations = 0;
     public static boolean speculationEnabled = true;
 
+    final byte[] TRUE = new byte[]{'t', 'r', 'u', 'e'};
+    final byte[] FALSE = new byte[]{'f', 'a', 'l', 's', 'e'};
+    final byte[] NULL = new byte[]{'n', 'u', 'l', 'l'};
+
     public static AbstractParser create(InputStream inputStream) {
         invocations++;
         if (invocations < TH) {

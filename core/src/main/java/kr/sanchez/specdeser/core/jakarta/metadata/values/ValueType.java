@@ -1,6 +1,7 @@
 package kr.sanchez.specdeser.core.jakarta.metadata.values;
 
 public enum ValueType {
+    STRUCTURAL,
     KEY,
     STRING_TYPE,
     BOOLEAN_TYPE,
@@ -8,5 +9,5 @@ public enum ValueType {
     STRING_CONSTANT,
     INT_CONSTANT,
     BOOLEAN_CONSTANT,
-    ANY // NOT IMPLEMENTED FOR NOW
+    ANY // TODO NOT IMPLEMENTED FOR NOW
 }

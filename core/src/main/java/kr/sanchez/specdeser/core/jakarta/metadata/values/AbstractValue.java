@@ -6,10 +6,12 @@ public abstract class AbstractValue<T> {
 
     final ValueType type;
     final T value;
+    final byte[] byteValue;
 
-    public AbstractValue(ValueType type, T value) {
+    public AbstractValue(ValueType type, T value, byte[] byteValue) {
         this.type = type;
         this.value = value;
+        this.byteValue = byteValue;
     }
 
     public ValueType getType() {
@@ -18,6 +20,10 @@ public abstract class AbstractValue<T> {
 
     public T getValue() {
         return this.value;
+    }
+
+    public byte[] getByteValue() {
+        return this.byteValue;
     }
 
     @Override
