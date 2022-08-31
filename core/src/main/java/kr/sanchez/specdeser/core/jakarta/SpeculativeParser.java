@@ -8,6 +8,7 @@ import javax.json.stream.JsonLocation;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -21,20 +22,25 @@ public class SpeculativeParser extends AbstractParser {
     private final byte[] CLOSING_SCOPE = new byte[]{',','}',']'};
 
     private final List<Event> profiledEvents = ProfileCollection.getParserProfileCollection();
-    private final HashMap<Integer, SpeculativeTypeTuple> speculativePositions = new HashMap<>();
+
+    private final ArrayList<AbstractValue<?>> profiledMetadata = ProfileCollection.getMetadataProfileCollection();
+    private final SpeculativeTypeTuple[] speculativeTypeTuples;
 
     private int eventPtr;
     private int profilePtr;
     private int parsingPtr;
+    private int speculativeTypesPtr;
 
     private final byte QUOTE = '"';
     private final byte BCKSL = '\\';
 
     public SpeculativeParser(InputStream inputStream) {
+        speculativeTypeTuples = new SpeculativeTypeTuple[speculationPointers.length];
         this.inputStream = inputStream;
         this.eventPtr = 0;
         this.profilePtr = 0;
         this.parsingPtr = 0;
+        this.speculativeTypesPtr = 0;
         readStream();
         buildStructuralIndex();
     }
@@ -52,15 +58,15 @@ public class SpeculativeParser extends AbstractParser {
     @Override
     public String getString() {
         if (this.profiledEvents.get(this.eventPtr-1) == Event.KEY_NAME) {
-            String ret = (String) ProfileCollection.getMetadataProfileCollection()
+            String ret = (String) profiledMetadata
                     .get(this.profilePtr++).getValue();
             return ret;
         }
-        AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection().get(this.profilePtr++);
+        AbstractValue<?> value = profiledMetadata.get(this.profilePtr++);
         if (value instanceof StringConstant) {
             return (String) value.getValue();
         } else if (value instanceof StringType) {
-            SpeculativeTypeTuple metadata = this.speculativePositions.get(this.eventPtr-1);
+            SpeculativeTypeTuple metadata = this.speculativeTypeTuples[this.speculativeTypesPtr++];
             return new String(this.inputBuffer, metadata.initialBufferPosition+1, metadata.size-2);
         } else if (value instanceof Any) {
             // TODO
@@ -77,11 +83,14 @@ public class SpeculativeParser extends AbstractParser {
 
     @Override
     public int getInt() {
-        AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection().get(this.profilePtr++);
+        AbstractValue<?> value = profiledMetadata.get(this.profilePtr++);
         if (value instanceof IntegerConstant) {
             return (Integer) value.getValue();
         } else if (value instanceof IntegerType) {
-            SpeculativeTypeTuple metadata = this.speculativePositions.get(this.eventPtr-1);
+            while (speculationPointers[this.speculativeTypesPtr] < this.eventPtr -1) {
+                this.speculativeTypesPtr++;
+            }
+            SpeculativeTypeTuple metadata = this.speculativeTypeTuples[this.speculativeTypesPtr++];
             int ret = 0;
             for (int i = metadata.initialBufferPosition; i < metadata.initialBufferPosition + metadata.size; i++) {
                 ret = ret * 10 + (this.inputBuffer[i] - '0');
@@ -135,7 +144,9 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.END_OBJECT) {
-                if (this.inputBuffer[this.parsingPtr++] != '}') {
+                if (this.parsingPtr == this.inputSize && this.inputBuffer[this.parsingPtr-1] == '}') {
+                }
+                else if (this.inputBuffer[this.parsingPtr++] != '}') {
                     AbstractParser.speculationEnabled = false;
                     return;
                 }
@@ -153,7 +164,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.KEY_NAME) {
-                byte[] key = ((String) ProfileCollection.getMetadataProfileCollection()
+                byte[] key = ((String) profiledMetadata
                         .get(this.profilePtr++).getValue()).getBytes();
                 boolean isCorrect = QUOTE == this.inputBuffer[parsingPtr++];
                 final int endString = this.parsingPtr + key.length;
@@ -169,7 +180,7 @@ public class SpeculativeParser extends AbstractParser {
             }
             else if (evt == Event.VALUE_STRING) {
                 // Almost same process as for the key when it's constant
-                AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection()
+                AbstractValue<?> value = profiledMetadata
                         .get(this.profilePtr++);
                 if (value instanceof StringConstant) {
                     byte[] stringValue = value.getByteValue();
@@ -214,7 +225,7 @@ public class SpeculativeParser extends AbstractParser {
                         return;
                     }
                     // Here we have the size of the string. We don't want to process it, just save the pointer values.
-                    this.speculativePositions.put(this.profilePtr, new SpeculativeTypeTuple(beginPtr, parsingPtr++ - beginPtr));
+                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr++ - beginPtr);
                 }
                 else if (value instanceof Any) {
                     // TODO Have to think what should be done in this case.
@@ -224,7 +235,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_NUMBER) {
-                AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection()
+                AbstractValue<?> value = profiledMetadata
                         .get(this.profilePtr++);
                 if (value instanceof IntegerConstant) {
                     byte[] byteValue = value.getByteValue();
@@ -233,7 +244,7 @@ public class SpeculativeParser extends AbstractParser {
                     while (isCorrect && valuePtr < byteValue.length) {
                         isCorrect = this.inputBuffer[parsingPtr++] == byteValue[valuePtr++];
                     }
-                    if (!isCorrect || !isByteValid(this.inputBuffer, parsingPtr, CLOSING_SCOPE)) {
+                    if (!isCorrect || !isByteValid(this.inputBuffer, parsingPtr++, CLOSING_SCOPE)) {
                         AbstractParser.speculationEnabled = false;
                         return;
                     }
@@ -251,7 +262,7 @@ public class SpeculativeParser extends AbstractParser {
                         AbstractParser.speculationEnabled = false;
                         return;
                     }
-                    this.speculativePositions.put(this.profilePtr, new SpeculativeTypeTuple(beginPtr, parsingPtr-1 - beginPtr));
+                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr-1 - beginPtr);
                 }
                 else if (value instanceof Any) {
                     // TODO Have to think what should be done in this case.
@@ -262,7 +273,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_TRUE) {
-                AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection()
+                AbstractValue<?> value = profiledMetadata
                         .get(this.profilePtr++);
                 if (value instanceof BooleanConstant) {
                     if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, TRUE) ||
@@ -280,7 +291,7 @@ public class SpeculativeParser extends AbstractParser {
                         AbstractParser.speculationEnabled = true;
                     }
                     parsingPtr += byteValue.length + 1;
-                    this.speculativePositions.put(this.profilePtr, new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr));
+                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr);
                 }
                 else if (value instanceof Any) {
                     // TODO Have to think what should be done in this case
@@ -291,7 +302,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_FALSE) {
-                AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection()
+                AbstractValue<?> value = profiledMetadata
                         .get(this.profilePtr++);
                 if (value instanceof BooleanConstant) {
                     if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, FALSE) ||
@@ -310,7 +321,7 @@ public class SpeculativeParser extends AbstractParser {
                         return;
                     }
                     parsingPtr += byteValue.length + 1;
-                    this.speculativePositions.put(this.profilePtr, new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr));
+                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr);
                 }
                 else if (value instanceof Any) {
                     // TODO Have to think what should be done in this case
@@ -321,7 +332,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_NULL) {
-                AbstractValue<?> value = ProfileCollection.getMetadataProfileCollection()
+                AbstractValue<?> value = profiledMetadata
                         .get(this.profilePtr++);
                 if (value instanceof BooleanConstant) {
                     if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, NULL) ||
@@ -339,7 +350,7 @@ public class SpeculativeParser extends AbstractParser {
                         AbstractParser.speculationEnabled = true;
                     }
                     parsingPtr += byteValue.length + 1;
-                    this.speculativePositions.put(this.profilePtr, new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr));
+                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr);
                 }
                 else if (value instanceof Any) {
                     // TODO Have to think what should be done in this case
@@ -354,7 +365,9 @@ public class SpeculativeParser extends AbstractParser {
             AbstractParser.speculationEnabled = false;
             return;
         }
+        // We reset pointers that will be used while retrieving data.
         this.profilePtr = 0;
+        this.speculativeTypesPtr = 0;
     }
 
     private int getPositionOfByte(byte[] input, int startPos, byte symbol) {
@@ -365,7 +378,7 @@ public class SpeculativeParser extends AbstractParser {
         return startPos; // Returns the position of the next byte to the searched one.
     }
 
-    private int getPositionOfBytes(byte[] input, int startPos, byte[] bytes) {
+    private int getPositionOfBytes(byte[] input, int startPos, byte[] bytes) { //TODO Change to int v1, int v2...
         int found = -1;
         byte firstByte = bytes[0];
         while (startPos < input.length) {

@@ -5,7 +5,7 @@ plugins {
     id 'me.champeau.jmh' version '0.6.6'
 }
 
-mainClassName = 'kr.sanchez.specdeser.benchmark.JakartaBenchmark'
+mainClassName = 'kr.sanchez.specdeser.benchmark.SpeculativeBenchmark'
 
 group 'kr.sanchez.specdeser'
 version '0.1'
@@ -33,7 +33,7 @@ dependencies {
 }
 
 jmh {
-    includes = ['.parser[SameKey]*1000Number.',]
+    includes = ['parserSpeculative*.',]
 //    jvm = '/home/carlos/Documents/Thesis/Code/graal/sdk/mxbuild/linux-amd64/GRAALJDK_CE_71C25D3E58_JAVA17/graaljdk-ce-71c25d3e58-java17-22.2.0-dev/bin/java'
     jvmArgs = [
             '-server',
@@ -56,17 +56,17 @@ jmh {
             "-Xms${HEAP_SIZE}",
             "-Xmx${HEAP_SIZE}",
             // Graal Compiling Graphs
-            '-Dgraal.Dump=:2',
-            '-Dgraal.MethodFilter=kr.sanchez.specdeser.core.jakarta.*.*,org.glassfish.json.*.*,com.fasterxml.jackson.core.UTF8StreamJsonParser.*'
+//            '-Dgraal.Dump=:2',
+//            '-Dgraal.MethodFilter=kr.sanchez.specdeser.core.jakarta.*.*,org.glassfish.json.*.*,com.fasterxml.jackson.core.UTF8StreamJsonParser.*'
             ]
     benchmarkMode = ['thrpt']
     fork = 1
-//    warmupIterations = 15
-//    warmup = '5s'
-//    iterations = 5
-//    timeOnIteration = '10s'
+    warmupIterations = 15
+    warmup = '5s'
+    iterations = 5
+    timeOnIteration = '10s'
     threads = 1
-    profilers = ["async:libPath=${asyncProfilerPath}"]
+//    profilers = ["async:libPath=${asyncProfilerPath}"]
 }
 
 jmhJar {

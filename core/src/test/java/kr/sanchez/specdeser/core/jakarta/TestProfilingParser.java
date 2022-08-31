@@ -110,7 +110,7 @@ public class TestProfilingParser {
                 {
                 "id":"foo",
                 "name":"ccc",
-                "loc":"43"
+                "loc1":"43"
                 }
                 """.replaceAll("\\s","");
         InputStream is1 = new ByteArrayInputStream(in1.getBytes(StandardCharsets.UTF_8));

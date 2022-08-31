@@ -5,10 +5,14 @@ import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
 
 import javax.json.stream.JsonParser;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class ProfileCollection {
     private static final ArrayList<AbstractValue<?>> metadataRecord = new ArrayList<>();
     private static final ArrayList<JsonParser.Event> parserEventRecord = new ArrayList<>();
+
+    private static final Set<Integer> ret = new TreeSet<>();
 
     private ProfileCollection() {
 
@@ -28,12 +32,12 @@ public class ProfileCollection {
         }
         else {
             if (AbstractParser.speculationEnabled && eventStep < parserEventRecord.size()) {
-                if (parserEventRecord.get(eventStep) != event) AbstractParser.speculationEnabled = false;
+                if (event == JsonParser.Event.KEY_NAME && parserEventRecord.get(eventStep) != event) AbstractParser.speculationEnabled = false;
             }
         }
     }
 
-    public static void addEvent(int execution, int step, AbstractValue<?> value) {
+    public static void addEvent(int execution, int step, int eventStep, AbstractValue<?> value) {
         if (execution == 1) {
             metadataRecord.add(value);
         }
@@ -41,12 +45,16 @@ public class ProfileCollection {
             if (AbstractParser.speculationEnabled && step < metadataRecord.size()) {
                 AbstractValue<?> actualValue = metadataRecord.get(step);
                 if (!actualValue.equals(value)) {
-                    if (actualValue.getValue() != ValueType.KEY &&
-                            actualValue.getType() == value.getType() &&
-                            !actualValue.getValue().equals(value.getValue())) { // Here we use equals to cover the String type.
+                    if (actualValue.getType() == ValueType.KEY) {
+                        AbstractParser.speculationEnabled = false;
+                    }
+                    else if (isCompatibleType(value, actualValue) &&
+                            !value.getValue().equals(actualValue.getValue())) { // Here we use equals to cover the String type.
+                        ret.add(eventStep);
                         updateInternalRecord(step, value.getType());
                     } else {
-                        AbstractParser.speculationEnabled = false;
+                        ret.add(eventStep);
+                        updateInternalRecord(step, ValueType.ANY);
                     }
                 }
             } else {
@@ -61,15 +69,44 @@ public class ProfileCollection {
             newValue = new StringType();
         } else if (type == ValueType.INT_CONSTANT) {
             newValue = new IntegerType();
-        } else {
+        } else if (type == ValueType.ANY) {
+            newValue = new Any();
+        }else {
             newValue = new BooleanType(); // For now we only have these options
         }
         metadataRecord.set(step, newValue);
     }
 
+    public static Integer[] getSpeculativeTypes() {
+//        for (int i = 0; i < metadataRecord.size(); i++) {
+//            if (isSpeculative(metadataRecord.get(i).getType())) ret.add(i);
+//        }
+//        return ret.toArray(new Integer[0]);
+        return ret.toArray(new Integer[0]);
+    }
+
+    private static boolean isSpeculative(ValueType type) {
+        return type == ValueType.ANY || type == ValueType.INT_TYPE || type == ValueType.BOOLEAN_TYPE || type == ValueType.STRING_TYPE;
+    }
     // TEST AND DEBUG METHODS //
 
     public static void resetProfileCollection() {
         ProfileCollection.metadataRecord.clear();
+    }
+
+    private static boolean isCompatibleType(AbstractValue parsedValue, AbstractValue currentValue) {
+        if (parsedValue.getType() == ValueType.STRING_CONSTANT &&
+                (currentValue.getType() == ValueType.STRING_TYPE || currentValue.getType() == ValueType.STRING_CONSTANT)) {
+            return true;
+        }
+        if (parsedValue.getType() == ValueType.INT_CONSTANT &&
+                (currentValue.getType() == ValueType.INT_TYPE || currentValue.getType() == ValueType.INT_CONSTANT)) {
+            return true;
+        }
+        if (parsedValue.getType() == ValueType.BOOLEAN_CONSTANT &&
+                (currentValue.getType() == ValueType.BOOLEAN_TYPE || currentValue.getType() == ValueType.BOOLEAN_CONSTANT)) {
+            return true;
+        }
+        return false;
     }
 }

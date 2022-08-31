@@ -35,11 +35,11 @@ public class ProfilingParser extends AbstractParser {
         ProfileCollection.addParserEvent(invocations, eventProfilingStep++, this.currentEvent);
         // We have to do this here because there are not specific functions to get boolean values.
         if (this.currentEvent == JsonParser.Event.VALUE_TRUE) {
-            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new BooleanConstant(true, TRUE));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new BooleanConstant(true, TRUE));
         } else if (this.currentEvent == JsonParser.Event.VALUE_FALSE) {
-            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new BooleanConstant(false, FALSE));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new BooleanConstant(false, FALSE));
         } else if (this.currentEvent == JsonParser.Event.VALUE_NULL) {
-            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new BooleanConstant(null, NULL));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new BooleanConstant(null, NULL));
         }
         return this.currentEvent;
     }
@@ -49,9 +49,9 @@ public class ProfilingParser extends AbstractParser {
         byte[] byteVal = Arrays.copyOfRange(delegate.inputBuffer, delegate.beginValuePtr, delegate.endValuePtr);
         String val = delegate.getString();
         if (currentEvent == Event.KEY_NAME) {
-            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new KeyValue(val, byteVal));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new KeyValue(val, byteVal));
         } else {
-            ProfileCollection.addEvent(invocations, metadataProfilingStep++, new StringConstant(val, byteVal));
+            ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new StringConstant(val, byteVal));
         }
         return val;
     }
@@ -65,7 +65,7 @@ public class ProfilingParser extends AbstractParser {
     public int getInt() {
         byte[] byteVal = Arrays.copyOfRange(delegate.inputBuffer, delegate.beginValuePtr, delegate.endValuePtr);
         int val = delegate.getInt();
-        ProfileCollection.addEvent(invocations, metadataProfilingStep++, new IntegerConstant(val, byteVal));
+        ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new IntegerConstant(val, byteVal));
         return val;
     }
 
@@ -73,7 +73,7 @@ public class ProfilingParser extends AbstractParser {
     public long getLong() {
         byte[] byteVal = Arrays.copyOfRange(delegate.inputBuffer, delegate.beginValuePtr, delegate.endValuePtr);
         long val = delegate.getLong();
-        ProfileCollection.addEvent(invocations, metadataProfilingStep++, new LongConstant(val, byteVal));
+        ProfileCollection.addEvent(invocations, metadataProfilingStep++, eventProfilingStep-1,new LongConstant(val, byteVal));
         return val;
     }
 
