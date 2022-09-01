@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class SpeculativeParser extends AbstractParser {
@@ -21,9 +20,11 @@ public class SpeculativeParser extends AbstractParser {
     private final byte[] inputBuffer = new byte[BUFFER_SIZE];
     private final byte[] CLOSING_SCOPE = new byte[]{',','}',']'};
 
-    private final List<Event> profiledEvents = ProfileCollection.getParserProfileCollection();
+    private final byte[] BITSHIFT = new byte[]{24,16,8,0};
 
-    private final ArrayList<AbstractValue<?>> profiledMetadata = ProfileCollection.getMetadataProfileCollection();
+    private final Event[] profiledEvents = ProfileCollection.getParserProfileCollection();
+
+    private final AbstractValue<?>[] profiledMetadata = ProfileCollection.getMetadataProfileCollection();
     private final SpeculativeTypeTuple[] speculativeTypeTuples;
 
     private int eventPtr;
@@ -47,22 +48,21 @@ public class SpeculativeParser extends AbstractParser {
 
     @Override
     public boolean hasNext() {
-        return this.eventPtr < this.profiledEvents.size();
+        return this.eventPtr < this.profiledEvents.length;
     }
 
     @Override
     public Event next() {
-        return this.profiledEvents.get(this.eventPtr++);
+        return this.profiledEvents[this.eventPtr++];
     }
 
     @Override
     public String getString() {
-        if (this.profiledEvents.get(this.eventPtr-1) == Event.KEY_NAME) {
-            String ret = (String) profiledMetadata
-                    .get(this.profilePtr++).getValue();
+        if (this.profiledEvents[this.eventPtr-1] == Event.KEY_NAME) {
+            String ret = (String) profiledMetadata[this.profilePtr++].getValue();
             return ret;
         }
-        AbstractValue<?> value = profiledMetadata.get(this.profilePtr++);
+        AbstractValue<?> value = profiledMetadata[this.profilePtr++];
         if (value instanceof StringConstant) {
             return (String) value.getValue();
         } else if (value instanceof StringType) {
@@ -83,7 +83,7 @@ public class SpeculativeParser extends AbstractParser {
 
     @Override
     public int getInt() {
-        AbstractValue<?> value = profiledMetadata.get(this.profilePtr++);
+        AbstractValue<?> value = profiledMetadata[this.profilePtr++];
         if (value instanceof IntegerConstant) {
             return (Integer) value.getValue();
         } else if (value instanceof IntegerType) {
@@ -164,8 +164,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.KEY_NAME) {
-                byte[] key = ((String) profiledMetadata
-                        .get(this.profilePtr++).getValue()).getBytes();
+                byte[] key = ((String) profiledMetadata[this.profilePtr++].getValue()).getBytes();
                 boolean isCorrect = QUOTE == this.inputBuffer[parsingPtr++];
                 final int endString = this.parsingPtr + key.length;
                 int i = 0;
@@ -180,8 +179,7 @@ public class SpeculativeParser extends AbstractParser {
             }
             else if (evt == Event.VALUE_STRING) {
                 // Almost same process as for the key when it's constant
-                AbstractValue<?> value = profiledMetadata
-                        .get(this.profilePtr++);
+                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
                 if (value instanceof StringConstant) {
                     byte[] stringValue = value.getByteValue();
                     boolean isCorrect = QUOTE == this.inputBuffer[parsingPtr++];
@@ -235,8 +233,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_NUMBER) {
-                AbstractValue<?> value = profiledMetadata
-                        .get(this.profilePtr++);
+                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
                 if (value instanceof IntegerConstant) {
                     byte[] byteValue = value.getByteValue();
                     int valuePtr = 0;
@@ -273,8 +270,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_TRUE) {
-                AbstractValue<?> value = profiledMetadata
-                        .get(this.profilePtr++);
+                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
                 if (value instanceof BooleanConstant) {
                     if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, TRUE) ||
                             !isByteValid(inputBuffer, parsingPtr + 4, CLOSING_SCOPE)) {
@@ -302,8 +298,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_FALSE) {
-                AbstractValue<?> value = profiledMetadata
-                        .get(this.profilePtr++);
+                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
                 if (value instanceof BooleanConstant) {
                     if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, FALSE) ||
                             !isByteValid(inputBuffer, parsingPtr + 5, CLOSING_SCOPE)) {
@@ -332,8 +327,7 @@ public class SpeculativeParser extends AbstractParser {
                 }
             }
             else if (evt == Event.VALUE_NULL) {
-                AbstractValue<?> value = profiledMetadata
-                        .get(this.profilePtr++);
+                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
                 if (value instanceof BooleanConstant) {
                     if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, NULL) ||
                             !isByteValid(inputBuffer, parsingPtr + 4, CLOSING_SCOPE)) {
@@ -381,12 +375,132 @@ public class SpeculativeParser extends AbstractParser {
     private int getPositionOfBytes(byte[] input, int startPos, byte[] bytes) { //TODO Change to int v1, int v2...
         int found = -1;
         byte firstByte = bytes[0];
-        while (startPos < input.length) {
+        while (startPos < this.inputSize) {
             startPos = getPositionOfByte(input, startPos, firstByte);
             int ptr = startPos-1;
             boolean match = true;
-            for (int i  = 1; match && i < bytes.length && startPos < input.length; i++) {
+            for (int i  = 1; match && i < bytes.length && startPos < this.inputSize; i++) {
                 match = bytes[i] == input[startPos++];
+            }
+            if (match) {
+                found = ptr;
+                break;
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Intrinsic candidate
+     * @param input
+     * @param startPos
+     * @param i1
+     * @return
+     */
+
+    private int indexOfConstant(byte[] input, int startPos, int i1) {
+        int found = -1;
+        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+        while (startPos < this.inputSize) {
+            startPos = getPositionOfByte(input, startPos, firstByte);
+            int ptr = startPos -1;
+            boolean match = true;
+            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i1 >> BITSHIFT[i]);
+                if (b == 0) break;
+                match = b == input[startPos++];
+            }
+            if (match) {
+                found = ptr;
+                break;
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Intrinsic candidate
+     * @param input
+     * @param startPos
+     * @param i1
+     * @param i2
+     * @return
+     */
+    private int indexOfConstant(byte[] input, int startPos, int i1, int i2) {
+        int found = -1;
+        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+        while (startPos < this.inputSize) {
+            startPos = getPositionOfByte(input, startPos, firstByte);
+            int ptr = startPos -1;
+            boolean match = true;
+            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i1 >> BITSHIFT[i]);
+                match = b == input[startPos++];
+            }
+            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i2 >> BITSHIFT[i]);
+                if (b == 0) break;
+                match = b == input[startPos++];
+            }
+            if (match) {
+                found = ptr;
+                break;
+            }
+        }
+        return found;
+    }
+
+    private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3) {
+        int found = -1;
+        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+        while (startPos < this.inputSize) {
+            startPos = getPositionOfByte(input, startPos, firstByte);
+            int ptr = startPos -1;
+            boolean match = true;
+            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i1 >> BITSHIFT[i]);
+                match = b == input[startPos++];
+            }
+            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i2 >> BITSHIFT[i]);
+                match = b == input[startPos++];
+            }
+            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i3 >> BITSHIFT[i]);
+                if (b == 0) break;
+                match = b == input[startPos++];
+            }
+            if (match) {
+                found = ptr;
+                break;
+            }
+        }
+        return found;
+    }
+
+    private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3, int i4) {
+        int found = -1;
+        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+        while (startPos < this.inputSize) {
+            startPos = getPositionOfByte(input, startPos, firstByte);
+            int ptr = startPos -1;
+            boolean match = true;
+            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i1 >> BITSHIFT[i]);
+                match = b == input[startPos++];
+            }
+            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i2 >> BITSHIFT[i]);
+                match = b == input[startPos++];
+            }
+            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i3 >> BITSHIFT[i]);
+                match = b == input[startPos++];
+            }
+            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+                byte b = (byte) (i4 >> BITSHIFT[i]);
+                if (b == 0) break;
+                match = b == input[startPos++];
             }
             if (match) {
                 found = ptr;

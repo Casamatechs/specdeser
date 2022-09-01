@@ -1,10 +1,7 @@
 package kr.sanchez.specdeser.core.jakarta;
 
 import kr.sanchez.specdeser.core.jakarta.metadata.ProfileCollection;
-import kr.sanchez.specdeser.core.jakarta.metadata.values.IntegerType;
-import kr.sanchez.specdeser.core.jakarta.metadata.values.KeyValue;
-import kr.sanchez.specdeser.core.jakarta.metadata.values.StringConstant;
-import kr.sanchez.specdeser.core.jakarta.metadata.values.StringType;
+import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,16 +33,16 @@ public class TestProfilingParser {
             runParser(parser);
             inputStream.reset();
         }
-        List collection = ProfileCollection.getMetadataProfileCollection();
-        List expectedValue = new ArrayList(Arrays.asList(new KeyValue("name"),
+        AbstractValue<?>[] collection = ProfileCollection.getMetadataProfileCollection();
+        AbstractValue<?>[] expectedValue = new AbstractValue[]{new KeyValue("name"),
                 new StringConstant("Persona"),
                 new KeyValue("surname"),
                 new StringConstant("Anosrep"),
                 new KeyValue("city"),
                 new StringConstant("Eindhoven"),
                 new KeyValue("country"),
-                new StringConstant("Netherlands")));
-        Assertions.assertEquals(collection, expectedValue);
+                new StringConstant("Netherlands")};
+        Assertions.assertArrayEquals(collection, expectedValue);
     }
 
     @Test
@@ -80,14 +77,14 @@ public class TestProfilingParser {
         runParser(parser);
         parser = (ProfilingParser) AbstractParser.create(is3);
         runParser(parser);
-        List collection = ProfileCollection.getMetadataProfileCollection();
-        List expectedValue = new ArrayList(Arrays.asList(new KeyValue("id"),
+        AbstractValue<?>[] collection = ProfileCollection.getMetadataProfileCollection();
+        AbstractValue<?>[] expectedValue = new AbstractValue[]{new KeyValue("id"),
                 new StringConstant("foo"),
                 new KeyValue("name"),
                 new StringType(),
                 new KeyValue("loc"),
-                new IntegerType()));
-        Assertions.assertEquals(collection, expectedValue);
+                new IntegerType()};
+        Assertions.assertArrayEquals(collection, expectedValue);
     }
 
     @Test

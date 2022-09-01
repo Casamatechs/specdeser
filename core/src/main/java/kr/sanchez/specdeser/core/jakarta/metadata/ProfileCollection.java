@@ -18,12 +18,12 @@ public class ProfileCollection {
 
     }
 
-    public static ArrayList<AbstractValue<?>> getMetadataProfileCollection() {
-        return (ArrayList<AbstractValue<?>>) metadataRecord.clone();
+    public static AbstractValue<?>[] getMetadataProfileCollection() {
+        return metadataRecord.toArray(new AbstractValue[0]);
     }
 
-    public static ArrayList<JsonParser.Event> getParserProfileCollection() {
-        return (ArrayList<JsonParser.Event>) parserEventRecord.clone();
+    public static JsonParser.Event[] getParserProfileCollection() {
+        return parserEventRecord.toArray(new JsonParser.Event[0]);
     }
 
     public static void addParserEvent(int execution, int eventStep, JsonParser.Event event) {
@@ -83,6 +83,13 @@ public class ProfileCollection {
 //        }
 //        return ret.toArray(new Integer[0]);
         return ret.toArray(new Integer[0]);
+    }
+
+    public static int byteToInt(byte[] bytes) {
+        return ((bytes[0] & 0xFF) << 24) |
+                ((bytes[1] & 0xFF) << 16) |
+                ((bytes[2] & 0xFF) << 8) |
+                ((bytes[3] & 0xFF));
     }
 
     private static boolean isSpeculative(ValueType type) {

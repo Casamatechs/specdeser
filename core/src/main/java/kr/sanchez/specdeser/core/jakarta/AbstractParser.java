@@ -1,6 +1,8 @@
 package kr.sanchez.specdeser.core.jakarta;
 
 import kr.sanchez.specdeser.core.jakarta.metadata.ProfileCollection;
+import kr.sanchez.specdeser.core.jakarta.metadata.values.AbstractValue;
+import kr.sanchez.specdeser.core.jakarta.metadata.values.ValueType;
 
 import javax.json.stream.JsonParser;
 import java.io.InputStream;
@@ -34,6 +36,7 @@ public abstract class AbstractParser implements JsonParser {
             speculationEnabled = canUseSpeculation();
             if (speculationEnabled) {
                 speculationPointers = ProfileCollection.getSpeculativeTypes();
+                buildSpeculativeConstants();
             }
         }
         if (speculationEnabled) {
@@ -47,14 +50,17 @@ public abstract class AbstractParser implements JsonParser {
         return true;
     }
 
-//    private static void buildSpeculativeConstants() {
+    private static void buildSpeculativeConstants() {
+        int ptrEvt = 0;
+        int ptrProf = 0;
+
 //        for (AbstractValue<?> value : ProfileCollection.getMetadataProfileCollection()) {
 //            if (value.getType() == ValueType.KEY) speculativeKeys.add((String) value.getValue());
 //            else if (value.getType() == ValueType.INT_CONSTANT) speculativeIntegers.add((Integer) value.getValue());
 //            else if (value.getType() == ValueType.STRING_CONSTANT) speculativeStrings.add((String) value.getValue());
 //            else if (value.getType() == ValueType.BOOLEAN_CONSTANT) speculativeLiterals.add((Boolean) value.getValue());
 //        }
-//    }
+    }
 
     // TEST AND DEBUG FUNCTIONS //
 
