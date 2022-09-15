@@ -1,15 +1,13 @@
 package kr.sanchez.specdeser.core.jakarta;
 
 import kr.sanchez.specdeser.core.jakarta.exception.InputReadException;
-import kr.sanchez.specdeser.core.jakarta.metadata.ProfileCollection;
+import kr.sanchez.specdeser.core.jakarta.metadata.*;
 import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
 
 import javax.json.stream.JsonLocation;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 
 public class SpeculativeParser extends AbstractParser {
 
@@ -18,32 +16,31 @@ public class SpeculativeParser extends AbstractParser {
     private int inputSize;
 
     private final byte[] inputBuffer = new byte[BUFFER_SIZE];
-    private final byte[] CLOSING_SCOPE = new byte[]{',','}',']'};
 
     private final byte[] BITSHIFT = new byte[]{24,16,8,0};
 
     private final Event[] profiledEvents = ProfileCollection.getParserProfileCollection();
 
-    private final AbstractValue<?>[] profiledMetadata = ProfileCollection.getMetadataProfileCollection();
-    private final SpeculativeTypeTuple[] speculativeTypeTuples;
+    private final MetadataValue[] profiledMetadata = ProfileCollection.getMetadataProfileCollection();
+
+    private final int[] speculativeTuplePosition;
+    private final int[] speculativeTupleSize;
 
     private int eventPtr;
     private int profilePtr;
     private int parsingPtr;
     private int speculativeTypesPtr;
 
-    private final byte QUOTE = '"';
-    private final byte BCKSL = '\\';
-
     public SpeculativeParser(InputStream inputStream) {
-        speculativeTypeTuples = new SpeculativeTypeTuple[speculationPointers.length];
+        speculativeTuplePosition = new int[speculationPointers.length];
+        speculativeTupleSize = new int[speculationPointers.length];
         this.inputStream = inputStream;
         this.eventPtr = 0;
         this.profilePtr = 0;
         this.parsingPtr = 0;
         this.speculativeTypesPtr = 0;
         readStream();
-        buildStructuralIndex();
+        buildVectorizedIndex();
     }
 
     @Override
@@ -59,16 +56,17 @@ public class SpeculativeParser extends AbstractParser {
     @Override
     public String getString() {
         if (this.profiledEvents[this.eventPtr-1] == Event.KEY_NAME) {
-            String ret = (String) profiledMetadata[this.profilePtr++].getValue();
+            String ret = profiledMetadata[this.profilePtr++].stringValue;
             return ret;
         }
-        AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-        if (value instanceof StringConstant) {
-            return (String) value.getValue();
-        } else if (value instanceof StringType) {
-            SpeculativeTypeTuple metadata = this.speculativeTypeTuples[this.speculativeTypesPtr++];
-            return new String(this.inputBuffer, metadata.initialBufferPosition+1, metadata.size-2);
-        } else if (value instanceof Any) {
+        MetadataValue value = profiledMetadata[this.profilePtr++];
+        if (value.type == ValueType.STRING_CONSTANT) {
+            return value.stringValue;
+        } else if (value.type == ValueType.STRING_TYPE) {
+            int initialBufferPosition = this.speculativeTuplePosition[this.speculativeTypesPtr];
+            int size = this.speculativeTupleSize[this.speculativeTypesPtr++];
+            return new String(this.inputBuffer, initialBufferPosition+1, size-2);
+        } else if (value.type == ValueType.ANY) {
             // TODO
             return "";
         } else {
@@ -83,25 +81,27 @@ public class SpeculativeParser extends AbstractParser {
 
     @Override
     public int getInt() {
-        AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-        if (value instanceof IntegerConstant) {
-            return (Integer) value.getValue();
-        } else if (value instanceof IntegerType) {
-            while (speculationPointers[this.speculativeTypesPtr] < this.eventPtr -1) {
-                this.speculativeTypesPtr++;
-            }
-            SpeculativeTypeTuple metadata = this.speculativeTypeTuples[this.speculativeTypesPtr++];
-            int ret = 0;
-            for (int i = metadata.initialBufferPosition; i < metadata.initialBufferPosition + metadata.size; i++) {
-                ret = ret * 10 + (this.inputBuffer[i] - '0');
-            }
-            return ret;
-        } else if (value instanceof Any) {
+        MetadataValue value = profiledMetadata[this.profilePtr++];
+        if (value.type == ValueType.INT_CONSTANT) {
+            return value.intValue;
+        } else if (value.type == ValueType.INT_TYPE) {
+            return calcSpeculativeInt();
+        } else if (value.type == ValueType.ANY) {
             // TODO
             return -1;
         } else {
             throw new RuntimeException("Big boom");
         }
+    }
+
+    private int calcSpeculativeInt() {
+        int initialBufferPosition = this.speculativeTuplePosition[this.speculativeTypesPtr];
+        int size = initialBufferPosition + this.speculativeTupleSize[this.speculativeTypesPtr++];
+        int ret = 0;
+        while (initialBufferPosition < size) {
+            ret = ret * 10 + (this.inputBuffer[initialBufferPosition++] - '0');
+        }
+        return ret;
     }
 
     @Override
@@ -135,233 +135,66 @@ public class SpeculativeParser extends AbstractParser {
             throw new InputReadException(e.getMessage());
         }
     }
-    private void buildStructuralIndex() {
-        for (Event evt : profiledEvents) {
-            if (evt == Event.START_OBJECT) {
-                if (this.inputBuffer[this.parsingPtr++] != '{') {
-                    AbstractParser.speculationEnabled = false;
-                    return;
-                }
-            }
-            else if (evt == Event.END_OBJECT) {
-                if (this.parsingPtr == this.inputSize && this.inputBuffer[this.parsingPtr-1] == '}') {
-                }
-                else if (this.inputBuffer[this.parsingPtr++] != '}') {
-                    AbstractParser.speculationEnabled = false;
-                    return;
-                }
-            }
-            else if (evt == Event.START_ARRAY) {
-                if (this.inputBuffer[this.parsingPtr++] != '[') {
-                    AbstractParser.speculationEnabled = false;
-                    return;
-                }
-            }
-            else if (evt == Event.END_ARRAY) {
-                if (this.inputBuffer[this.parsingPtr++] != '}') {
-                    AbstractParser.speculationEnabled = false;
-                    return;
-                }
-            }
-            else if (evt == Event.KEY_NAME) {
-                byte[] key = ((String) profiledMetadata[this.profilePtr++].getValue()).getBytes();
-                boolean isCorrect = QUOTE == this.inputBuffer[parsingPtr++];
-                final int endString = this.parsingPtr + key.length;
-                int i = 0;
-                while (isCorrect && this.parsingPtr < endString) {
-                    isCorrect = key[i++] == this.inputBuffer[this.parsingPtr++];
-                }
-                if (!isCorrect || this.inputBuffer[this.parsingPtr++] != QUOTE || this.inputBuffer[this.parsingPtr++] != ':') {
-                    AbstractParser.speculationEnabled = false; // TODO Fallback parser
-                    return;
-                }
-                // At this point we know the string is correct and the point is on the first byte of the value.
-            }
-            else if (evt == Event.VALUE_STRING) {
-                // Almost same process as for the key when it's constant
-                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-                if (value instanceof StringConstant) {
-                    byte[] stringValue = value.getByteValue();
-                    boolean isCorrect = QUOTE == this.inputBuffer[parsingPtr++];
-                    final int endString = this.parsingPtr + stringValue.length;
-                    int i = 0;
-                    while (isCorrect && this.parsingPtr < endString) {
-                        isCorrect = stringValue[i++] == this.inputBuffer[this.parsingPtr++];
+
+    private void buildVectorizedIndex() {
+        this.parsingPtr = 0; // TODO Remove this line when the implementation is completed.
+        int variableIdx = 0;
+        int prevInitialPtr = 0;
+        int prevSize = 0;
+        for (int j = 0; j < vectorizedConstants.length; j++) {
+            VectorizedData vectorizedData = vectorizedConstants[j];
+            int size = vectorizedData.size;
+            final int _size = vectorizedData.size;
+            int currentPtr = -1;
+            for (int i = 0; i < vectorizedData.data.length; i++) {
+                AbstractInt data = vectorizedData.data[i];
+                if (data instanceof Int4) {
+                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3, data.i4);
+                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
+                    if (res < 0 || res > this.inputSize) {
+                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
                     }
-                    if (!isCorrect || this.inputBuffer[this.parsingPtr++] != QUOTE
-                            || (this.inputBuffer[this.parsingPtr++] != ',' && this.inputBuffer[this.parsingPtr] != '}' && this.inputBuffer[this.parsingPtr] != ']')) {
-                        AbstractParser.speculationEnabled = false; // TODO Fallback parser
-                        return;
-                    }
-                    // At this point we know the string is correct and the point is on the first byte of the next key, value or end of object/array.
-                }
-                else if (value instanceof StringType) {
-                    /*
-                        1. We build the string bitmask using SIMD
-                        2. We build the backslash bitmask using SIMD
-                        3. Compute the size of the string using SIMD
-                     */
-                    // For now, just will check byte by byte till we find the closing valid quote.
-                    int beginPtr = parsingPtr;
-                    boolean isCorrect = QUOTE == this.inputBuffer[parsingPtr++];
-                    boolean foundBackslash = false;
-                    while (isCorrect) {
-                        byte readByte = this.inputBuffer[parsingPtr++];
-                        if (readByte == BCKSL) {
-                            foundBackslash = !foundBackslash;
+                    else {
+                        if (i < vectorizedData.data.length -1) {
+                            this.parsingPtr += 16;
+                            size -= 16;
                         }
-                        else if (readByte == QUOTE && !foundBackslash) {
-                            break;
-                        }
-                        else {
-                            foundBackslash = false;
-                            // TODO Control closing scope
-                        }
+                        else this.parsingPtr = res + size;
                     }
-                    if (!isCorrect) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    // Here we have the size of the string. We don't want to process it, just save the pointer values.
-                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr++ - beginPtr);
                 }
-                else if (value instanceof Any) {
-                    // TODO Have to think what should be done in this case.
-                } else {
-                    // TODO BIG ERROR
-                    throw new RuntimeException("We should never reach this point");
+                else if (data instanceof Int3) {
+                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3);
+                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
+                    if (res < 0 || res > this.inputSize) {
+                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+                    }
+                    else this.parsingPtr = res + size;
                 }
-            }
-            else if (evt == Event.VALUE_NUMBER) {
-                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-                if (value instanceof IntegerConstant) {
-                    byte[] byteValue = value.getByteValue();
-                    int valuePtr = 0;
-                    boolean isCorrect = this.inputBuffer[parsingPtr++] == byteValue[valuePtr++];
-                    while (isCorrect && valuePtr < byteValue.length) {
-                        isCorrect = this.inputBuffer[parsingPtr++] == byteValue[valuePtr++];
+                else if (data instanceof Int2) {
+                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2);
+                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
+                    if (res < 0 || res > this.inputSize) {
+                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
                     }
-                    if (!isCorrect || !isByteValid(this.inputBuffer, parsingPtr++, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    // At this point we know the integer is correct and the point is on the first byte of the next key, value or end of object/array.
-                }
-                else if (value instanceof IntegerType) {
-                    int beginPtr = parsingPtr;
-                    byte firstChar = this.inputBuffer[parsingPtr++];
-                    boolean isCorrect = firstChar == '-' || (firstChar >= '0' && firstChar <= '9');
-                    while (isCorrect && parsingPtr < this.inputSize) {
-                        byte readByte = this.inputBuffer[parsingPtr++];
-                        isCorrect = readByte >= '0' && readByte <= '9';
-                    }
-                    if (!isCorrect && !isByteValid(inputBuffer, parsingPtr-1, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr-1 - beginPtr);
-                }
-                else if (value instanceof Any) {
-                    // TODO Have to think what should be done in this case.
+                    else this.parsingPtr = res + size;
                 }
                 else {
-                    // TODO BIG ERROR
-                    throw new RuntimeException("We should never reach this point");
+                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1);
+                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
+                    if (res < 0 || res > this.inputSize) {
+                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+                    }
+                    else this.parsingPtr = res + size;
                 }
             }
-            else if (evt == Event.VALUE_TRUE) {
-                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-                if (value instanceof BooleanConstant) {
-                    if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, TRUE) ||
-                            !isByteValid(inputBuffer, parsingPtr + 4, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    parsingPtr += 5;
-                }
-                else if (value instanceof BooleanType) {
-                    byte[] byteValue = value.getByteValue();
-                    int beginPtr = parsingPtr;
-                    if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, byteValue) ||
-                            !isByteValid(inputBuffer, parsingPtr + byteValue.length, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = true;
-                    }
-                    parsingPtr += byteValue.length + 1;
-                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr);
-                }
-                else if (value instanceof Any) {
-                    // TODO Have to think what should be done in this case
-                }
-                else {
-                    // TODO BIG ERROR
-                    throw new RuntimeException("We should never reach this point");
-                }
+            if (variableIdx++ != 0) {
+                int start = prevInitialPtr + prevSize;
+                this.speculativeTuplePosition[variableIdx-2] = start;
+                this.speculativeTupleSize[variableIdx-2] = currentPtr - start;
+                prevInitialPtr = currentPtr;
             }
-            else if (evt == Event.VALUE_FALSE) {
-                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-                if (value instanceof BooleanConstant) {
-                    if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, FALSE) ||
-                            !isByteValid(inputBuffer, parsingPtr + 5, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    parsingPtr += 6;
-                }
-                else if (value instanceof BooleanType) {
-                    byte[] byteValue = value.getByteValue();
-                    int beginPtr = parsingPtr;
-                    if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, byteValue) ||
-                            !isByteValid(inputBuffer, parsingPtr + byteValue.length, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    parsingPtr += byteValue.length + 1;
-                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr);
-                }
-                else if (value instanceof Any) {
-                    // TODO Have to think what should be done in this case
-                }
-                else {
-                    // TODO BIG ERROR
-                    throw new RuntimeException("We should never reach this point");
-                }
-            }
-            else if (evt == Event.VALUE_NULL) {
-                AbstractValue<?> value = profiledMetadata[this.profilePtr++];
-                if (value instanceof BooleanConstant) {
-                    if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, NULL) ||
-                            !isByteValid(inputBuffer, parsingPtr + 4, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = false;
-                        return;
-                    }
-                    parsingPtr += 5;
-                }
-                else if (value instanceof BooleanType) {
-                    byte[] byteValue = value.getByteValue();
-                    int beginPtr = parsingPtr;
-                    if (parsingPtr != getPositionOfBytes(inputBuffer, parsingPtr, byteValue) ||
-                            !isByteValid(inputBuffer, parsingPtr + byteValue.length, CLOSING_SCOPE)) {
-                        AbstractParser.speculationEnabled = true;
-                    }
-                    parsingPtr += byteValue.length + 1;
-                    this.speculativeTypeTuples[this.speculativeTypesPtr++] = new SpeculativeTypeTuple(beginPtr, parsingPtr - beginPtr);
-                }
-                else if (value instanceof Any) {
-                    // TODO Have to think what should be done in this case
-                }
-                else {
-                    // TODO BIG ERROR
-                    throw new RuntimeException("We should never reach this point");
-                }
-            }
+            prevSize = _size;
         }
-        if (this.parsingPtr != inputSize && this.parsingPtr != BUFFER_SIZE) {
-            AbstractParser.speculationEnabled = false;
-            return;
-        }
-        // We reset pointers that will be used while retrieving data.
-        this.profilePtr = 0;
-        this.speculativeTypesPtr = 0;
     }
 
     private int getPositionOfByte(byte[] input, int startPos, byte symbol) {
@@ -370,24 +203,6 @@ public class SpeculativeParser extends AbstractParser {
             found = input[startPos++] == symbol;
         }
         return startPos; // Returns the position of the next byte to the searched one.
-    }
-
-    private int getPositionOfBytes(byte[] input, int startPos, byte[] bytes) { //TODO Change to int v1, int v2...
-        int found = -1;
-        byte firstByte = bytes[0];
-        while (startPos < this.inputSize) {
-            startPos = getPositionOfByte(input, startPos, firstByte);
-            int ptr = startPos-1;
-            boolean match = true;
-            for (int i  = 1; match && i < bytes.length && startPos < this.inputSize; i++) {
-                match = bytes[i] == input[startPos++];
-            }
-            if (match) {
-                found = ptr;
-                break;
-            }
-        }
-        return found;
     }
 
     /**
@@ -405,7 +220,7 @@ public class SpeculativeParser extends AbstractParser {
             startPos = getPositionOfByte(input, startPos, firstByte);
             int ptr = startPos -1;
             boolean match = true;
-            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i1 >> BITSHIFT[i]);
                 if (b == 0) break;
                 match = b == input[startPos++];
@@ -433,11 +248,11 @@ public class SpeculativeParser extends AbstractParser {
             startPos = getPositionOfByte(input, startPos, firstByte);
             int ptr = startPos -1;
             boolean match = true;
-            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i1 >> BITSHIFT[i]);
                 match = b == input[startPos++];
             }
-            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i2 >> BITSHIFT[i]);
                 if (b == 0) break;
                 match = b == input[startPos++];
@@ -457,15 +272,15 @@ public class SpeculativeParser extends AbstractParser {
             startPos = getPositionOfByte(input, startPos, firstByte);
             int ptr = startPos -1;
             boolean match = true;
-            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i1 >> BITSHIFT[i]);
                 match = b == input[startPos++];
             }
-            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i2 >> BITSHIFT[i]);
                 match = b == input[startPos++];
             }
-            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i3 >> BITSHIFT[i]);
                 if (b == 0) break;
                 match = b == input[startPos++];
@@ -485,19 +300,19 @@ public class SpeculativeParser extends AbstractParser {
             startPos = getPositionOfByte(input, startPos, firstByte);
             int ptr = startPos -1;
             boolean match = true;
-            for (int i = 1; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i1 >> BITSHIFT[i]);
                 match = b == input[startPos++];
             }
-            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i2 >> BITSHIFT[i]);
                 match = b == input[startPos++];
             }
-            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i3 >> BITSHIFT[i]);
                 match = b == input[startPos++];
             }
-            for (int i = 0; match && i < 3 && startPos < this.inputSize; i++) {
+            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
                 byte b = (byte) (i4 >> BITSHIFT[i]);
                 if (b == 0) break;
                 match = b == input[startPos++];
@@ -508,13 +323,5 @@ public class SpeculativeParser extends AbstractParser {
             }
         }
         return found;
-    }
-
-    private boolean isByteValid(byte[] input, int pos, byte[] validBytes) {
-        if (pos >= input.length) return false;
-        for (byte b : validBytes) {
-            if (input[pos] == b) return true;
-        }
-        return false;
     }
 }

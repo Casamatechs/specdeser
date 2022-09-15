@@ -1,0 +1,94 @@
+          ns  percent  samples  top
+  ----------  -------  -------  ---
+ 55267278918   96.06%     5526  /usr/lib/x86_64-linux-gnu/libc-2.31.so
+   242765651    0.42%       24  SpinPause
+   172067657    0.30%       17  void WeakProcessor::Task::work<G1STWIsAliveClosure, G1KeepAliveClosure>(unsigned int, G1STWIsAliveClosure*, G1KeepAliveClosure*)
+   161254844    0.28%       16  HeapRegionManager::par_iterate(HeapRegionClosure*, HeapRegionClaimer*, unsigned int) const
+   101072097    0.18%       10  G1ParCopyClosure<(G1Barrier)1, true>::do_oop(oopDesc**)
+   100631694    0.17%       10  __lock_text_start_[k]
+    60808220    0.11%        6  G1RebuildFreeListTask::work(unsigned int)
+    60718064    0.11%        6  G1PrepareEvacuationTask::G1PrepareRegionsClosure::do_heap_region(HeapRegion*)
+    60700970    0.11%        6  ClassLoaderData::ChunkedHandleList::oops_do(OopClosure*)
+    59986687    0.10%        6  checkcast_arraycopy
+    50655555    0.09%        5  malloc
+    50520460    0.09%        5  G1ParCopyClosure<(G1Barrier)0, true>::do_oop(oopDesc**)
+    50508910    0.09%        5  G1FromCardCache::clear(unsigned int)
+    50019048    0.09%        5  G1CollectedHeap::humongous_obj_allocate_initialize_regions(HeapRegion*, unsigned int, unsigned long)
+    40199546    0.07%        4  G1RegionMarkStatsCache::reset()
+    40153092    0.07%        4  ClassLoaderDataGraph::clear_claimed_marks()
+    39988692    0.07%        4  kr.sanchez.specdeser.core.jakarta.SpeculativeParser.buildVectorizedIndex
+    39974408    0.07%        4  kr.sanchez.specdeser.core.jakarta.SpeculativeParser.indexOfConstant
+    30408149    0.05%        3  OopStorage::BasicParState::claim_next_segment(OopStorage::BasicParState::IterationData*)
+    30380715    0.05%        3  native_queued_spin_lock_slowpath_[k]
+    30329628    0.05%        3  G1MergeHeapRootsTask::G1FlushHumongousCandidateRemSets::do_heap_region(HeapRegion*)
+    30001340    0.05%        3  HeapRegionManager::find_contiguous_in_free_list(unsigned int)
+    30000408    0.05%        3  java.lang.System.arraycopy
+    29995698    0.05%        3  kr.sanchez.specdeser.core.jakarta.SpeculativeParser.getString
+    29993936    0.05%        3  FreeRegionList::remove_starting_at(HeapRegion*, unsigned int)
+    20375338    0.04%        2  __vdso_clock_gettime
+    20277096    0.04%        2  G1RemSet::prepare_region_for_scan(HeapRegion*)
+    20189122    0.04%        2  GangWorker::loop()
+    20013643    0.03%        2  BitMap::clear_range(unsigned long, unsigned long)
+    20001800    0.03%        2  ObjArrayAllocator::initialize(HeapWordImpl**) const
+    19998093    0.03%        2  HeapRegion::set_continues_humongous(HeapRegion*)
+    19985580    0.03%        2  MarkBitMap::do_clear(MemRegion, bool)
+    10188157    0.02%        1  GCTracer::send_phase_events(TimePartitions*) const
+    10168308    0.02%        1  CardTable::clear(MemRegion)
+    10164227    0.02%        1  NamedThread::is_Named_thread() const
+    10151155    0.02%        1  G1GCPhaseTimes::record_or_add_thread_work_item(G1GCPhaseTimes::GCParPhases, unsigned int, unsigned long, unsigned int)
+    10149697    0.02%        1  OtherRegionsTable::clear()
+    10149647    0.02%        1  HeapRegion::clear_cardtable()
+    10149035    0.02%        1  Method::bcp_from(unsigned char*) const
+    10139359    0.02%        1  sched_yield@plt
+    10138818    0.02%        1  futex_wait_[k]
+    10137932    0.02%        1  G1ParScanThreadState::trim_queue_to_threshold(unsigned int)
+    10125922    0.02%        1  hash_futex_[k]
+    10125620    0.02%        1  HeapRegionClaimer::claim_region(unsigned int)
+    10124526    0.02%        1  HeapRegion::hr_clear(bool)
+    10123781    0.02%        1  ClassLoaderDataGraph::roots_cld_do(CLDClosure*, CLDClosure*)
+    10122554    0.02%        1  G1RemSet::scan_collection_set_regions(G1ParScanThreadState*, unsigned int, G1GCPhaseTimes::GCParPhases, G1GCPhaseTimes::GCParPhases, G1GCPhaseTimes::GCParPhases)
+    10120727    0.02%        1  clock_gettime
+    10116609    0.02%        1  do_futex_wait.constprop.0
+    10116010    0.02%        1  ConstantPool::impl_signature_ref_at(int, bool)
+    10111227    0.02%        1  HeapRegionRemSet::clear_locked(bool)
+    10107862    0.02%        1  G1ConcurrentStartMarkClosures<false>::strong_oops()
+    10102280    0.02%        1  pthread_mutex_lock
+    10100508    0.02%        1  __x64_sys_futex_[k]
+    10098750    0.02%        1  G1PLABAllocator::flush_and_retire_stats()
+    10086620    0.02%        1  __get_user_nocheck_4_[k]
+    10069294    0.02%        1  G1ParEvacuateFollowersClosure::do_void()
+    10065502    0.02%        1  AbsSeq::davg() const
+    10062327    0.02%        1  sem_post@@GLIBC_2.2.5
+    10061731    0.02%        1  GCTracer::send_metaspace_chunk_free_list_summary(GCWhen::Type, Metaspace::MetadataType, MetaspaceChunkFreeListSummary const&) const
+    10057791    0.02%        1  Mutex::lock_without_safepoint_check()
+    10048033    0.02%        1  G1GCPhaseTimes::print_post_evacuate_collection_set() const
+    10047673    0.02%        1  G1PostEvacuateCollectionSetCleanupTask1::MergePssTask::worker_cost() const
+    10047249    0.02%        1  NoteStartOfMarkHRClosure::do_heap_region(HeapRegion*)
+    10046296    0.02%        1  WorkerDataArray<double>::reset()
+    10044512    0.02%        1  ObjectSampler::is_created()
+    10040885    0.02%        1  OtherRegionsTable::occupied() const
+    10035987    0.02%        1  EventMarkWithLogFunction<&Events::log_vm_operation>::EventMarkWithLogFunction(char const*, ...)
+    10030646    0.02%        1  SafepointSynchronize::begin()
+    10030267    0.02%        1  kr.sanchez.specdeser.benchmark.jmh_generated.SpeculativeBenchmark_parserSpeculativeConstant_jmhTest.parserSpeculativeConstant_thrpt_jmhStub
+    10029455    0.02%        1  jdk.vm.ci.meta.MetaUtil.replacePackageSeparatorsWithDot
+    10010448    0.02%        1  kr.sanchez.specdeser.core.jakarta.metadata.ProfileCollection.getMetadataProfileCollection
+    10010389    0.02%        1  G1CollectedHeap::attempt_allocation_slow(unsigned long)
+    10002703    0.02%        1  kr.sanchez.specdeser.core.jakarta.SpeculativeParser.<init>
+    10002223    0.02%        1  java.io.ByteArrayInputStream.read
+    10000891    0.02%        1  G1Policy::need_to_start_conc_mark(char const*, unsigned long)
+     9998817    0.02%        1  G1ClearBitMapTask::G1ClearBitmapHRClosure::do_heap_region(HeapRegion*)
+     9998727    0.02%        1  HeapRegionRemSet::clear_fcc()
+     9997845    0.02%        1  HumongousRegionSetChecker::check_mt_safety()
+     9997273    0.02%        1  kr.sanchez.specdeser.benchmark.SpeculativeBenchmark.parserSpeculativeConstant
+     9996923    0.02%        1  G1BlockOffsetTablePart::set_for_starts_humongous(HeapWordImpl**, unsigned long)
+     9996811    0.02%        1  G1CollectedHeap::try_collect_concurrently(GCCause::Cause, unsigned int, unsigned int)
+     9994998    0.02%        1  java.util.regex.Pattern.lambda$DOT$4
+     9986293    0.02%        1  G1CommittedRegionMap::next_active_range(unsigned int) const
+     9978189    0.02%        1  __pthread_disable_asynccancel
+
+
+ Benchmark                                             Mode   Cnt    Score   Error  Units
+ SpeculativeBenchmark.parserConstantVectorized         thrpt    5  847.481 ± 4.599  ops/s
+ SpeculativeBenchmark.parserSpeculativeVectorized      thrpt    5  808.973 ± 5.113  ops/s
+ SpeculativeBenchmark.parserFallback                   thrpt    5  755.000 ± 1.274  ops/s
+

@@ -1,7 +1,8 @@
 package kr.sanchez.specdeser.core.jakarta;
 
 import kr.sanchez.specdeser.core.jakarta.metadata.ProfileCollection;
-import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
+import kr.sanchez.specdeser.core.jakarta.metadata.values.MetadataValue;
+import kr.sanchez.specdeser.core.jakarta.metadata.values.ValueType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
 
 public class TestProfilingParser {
 
@@ -33,15 +33,15 @@ public class TestProfilingParser {
             runParser(parser);
             inputStream.reset();
         }
-        AbstractValue<?>[] collection = ProfileCollection.getMetadataProfileCollection();
-        AbstractValue<?>[] expectedValue = new AbstractValue[]{new KeyValue("name"),
-                new StringConstant("Persona"),
-                new KeyValue("surname"),
-                new StringConstant("Anosrep"),
-                new KeyValue("city"),
-                new StringConstant("Eindhoven"),
-                new KeyValue("country"),
-                new StringConstant("Netherlands")};
+        MetadataValue[] collection = ProfileCollection.getMetadataProfileCollection();
+        MetadataValue[] expectedValue = new MetadataValue[]{new MetadataValue(ValueType.KEY, "name", "name".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.STRING_CONSTANT, "Persona", "Persona".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.KEY, "surname", "surname".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.STRING_CONSTANT, "Anosrep", "Anosrep".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.KEY, "city", "city".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.STRING_CONSTANT, "Eindhoven", "Eindhoven".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.KEY, "country", "country".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.STRING_CONSTANT, "Netherlands", "Netherlands".getBytes(StandardCharsets.UTF_8))};
         Assertions.assertArrayEquals(collection, expectedValue);
     }
 
@@ -77,13 +77,13 @@ public class TestProfilingParser {
         runParser(parser);
         parser = (ProfilingParser) AbstractParser.create(is3);
         runParser(parser);
-        AbstractValue<?>[] collection = ProfileCollection.getMetadataProfileCollection();
-        AbstractValue<?>[] expectedValue = new AbstractValue[]{new KeyValue("id"),
-                new StringConstant("foo"),
-                new KeyValue("name"),
-                new StringType(),
-                new KeyValue("loc"),
-                new IntegerType()};
+        MetadataValue[] collection = ProfileCollection.getMetadataProfileCollection();
+        MetadataValue[] expectedValue = new MetadataValue[]{new MetadataValue(ValueType.KEY, "id", "id".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.STRING_CONSTANT, "foo", "foo".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.KEY, "name", "name".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.STRING_TYPE),
+                new MetadataValue(ValueType.KEY, "loc", "loc".getBytes(StandardCharsets.UTF_8)),
+                new MetadataValue(ValueType.INT_TYPE)};
         Assertions.assertArrayEquals(collection, expectedValue);
     }
 

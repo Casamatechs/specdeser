@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class ProfileCollection {
-    private static final ArrayList<AbstractValue<?>> metadataRecord = new ArrayList<>();
+    private static final ArrayList<MetadataValue> metadataRecord = new ArrayList<>();
     private static final ArrayList<JsonParser.Event> parserEventRecord = new ArrayList<>();
 
     private static final Set<Integer> ret = new TreeSet<>();
@@ -18,8 +18,8 @@ public class ProfileCollection {
 
     }
 
-    public static AbstractValue<?>[] getMetadataProfileCollection() {
-        return metadataRecord.toArray(new AbstractValue[0]);
+    public static MetadataValue[] getMetadataProfileCollection() {
+        return metadataRecord.toArray(new MetadataValue[0]);
     }
 
     public static JsonParser.Event[] getParserProfileCollection() {
@@ -37,21 +37,20 @@ public class ProfileCollection {
         }
     }
 
-    public static void addEvent(int execution, int step, int eventStep, AbstractValue<?> value) {
+    public static void addEvent(int execution, int step, int eventStep, MetadataValue value) {
         if (execution == 1) {
             metadataRecord.add(value);
         }
         else {
             if (AbstractParser.speculationEnabled && step < metadataRecord.size()) {
-                AbstractValue<?> actualValue = metadataRecord.get(step);
+                MetadataValue actualValue = metadataRecord.get(step);
                 if (!actualValue.equals(value)) {
-                    if (actualValue.getType() == ValueType.KEY) {
+                    if (actualValue.type == ValueType.KEY) {
                         AbstractParser.speculationEnabled = false;
                     }
-                    else if (isCompatibleType(value, actualValue) &&
-                            !value.getValue().equals(actualValue.getValue())) { // Here we use equals to cover the String type.
+                    else if (isCompatibleType(value, actualValue)) { // Here we use equals to cover the String type.
                         ret.add(eventStep);
-                        updateInternalRecord(step, value.getType());
+                        updateInternalRecord(step, value.type);
                     } else {
                         ret.add(eventStep);
                         updateInternalRecord(step, ValueType.ANY);
@@ -64,32 +63,21 @@ public class ProfileCollection {
     }
 
     private static void updateInternalRecord(int step, ValueType type) {
-        AbstractValue<?> newValue;
+        MetadataValue newValue;
         if (type == ValueType.STRING_CONSTANT) {
-            newValue = new StringType();
+            newValue = new MetadataValue(ValueType.STRING_TYPE);
         } else if (type == ValueType.INT_CONSTANT) {
-            newValue = new IntegerType();
+            newValue = new MetadataValue(ValueType.INT_TYPE);
         } else if (type == ValueType.ANY) {
-            newValue = new Any();
+            newValue = new MetadataValue(ValueType.ANY);
         }else {
-            newValue = new BooleanType(); // For now we only have these options
+            newValue = new MetadataValue(ValueType.BOOLEAN_TYPE); // For now we only have these options
         }
         metadataRecord.set(step, newValue);
     }
 
     public static Integer[] getSpeculativeTypes() {
-//        for (int i = 0; i < metadataRecord.size(); i++) {
-//            if (isSpeculative(metadataRecord.get(i).getType())) ret.add(i);
-//        }
-//        return ret.toArray(new Integer[0]);
         return ret.toArray(new Integer[0]);
-    }
-
-    public static int byteToInt(byte[] bytes) {
-        return ((bytes[0] & 0xFF) << 24) |
-                ((bytes[1] & 0xFF) << 16) |
-                ((bytes[2] & 0xFF) << 8) |
-                ((bytes[3] & 0xFF));
     }
 
     private static boolean isSpeculative(ValueType type) {
@@ -101,17 +89,23 @@ public class ProfileCollection {
         ProfileCollection.metadataRecord.clear();
     }
 
-    private static boolean isCompatibleType(AbstractValue parsedValue, AbstractValue currentValue) {
-        if (parsedValue.getType() == ValueType.STRING_CONSTANT &&
-                (currentValue.getType() == ValueType.STRING_TYPE || currentValue.getType() == ValueType.STRING_CONSTANT)) {
+    private static boolean isCompatibleType(MetadataValue parsedValue, MetadataValue currentValue) {
+        if (parsedValue.type == ValueType.STRING_CONSTANT &&
+                (currentValue.type == ValueType.STRING_TYPE || currentValue.type == ValueType.STRING_CONSTANT) &&
+                !parsedValue.stringValue.equals(currentValue.stringValue)) {
             return true;
         }
-        if (parsedValue.getType() == ValueType.INT_CONSTANT &&
-                (currentValue.getType() == ValueType.INT_TYPE || currentValue.getType() == ValueType.INT_CONSTANT)) {
+        if (parsedValue.type == ValueType.INT_CONSTANT &&
+                (currentValue.type == ValueType.INT_TYPE || currentValue.type == ValueType.INT_CONSTANT) &&
+                parsedValue.intValue != currentValue.intValue) {
             return true;
         }
-        if (parsedValue.getType() == ValueType.BOOLEAN_CONSTANT &&
-                (currentValue.getType() == ValueType.BOOLEAN_TYPE || currentValue.getType() == ValueType.BOOLEAN_CONSTANT)) {
+        if (parsedValue.type == ValueType.BOOLEAN_CONSTANT &&
+                (currentValue.type == ValueType.BOOLEAN_TYPE || currentValue.type == ValueType.BOOLEAN_CONSTANT) &&
+                parsedValue.booleanValue != currentValue.booleanValue) {
+            return true;
+        }
+        if (parsedValue.type == ValueType.NULL_CONSTANT && currentValue.type == ValueType.NULL_CONSTANT) {
             return true;
         }
         return false;
