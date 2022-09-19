@@ -9,8 +9,7 @@ public abstract class AbstractInt {
     public int i3 = 0;
     public int i4 = 0;
 
-    public static AbstractInt create(byte[] byteValue, int offset) {
-        int len = byteValue.length;
+    public static AbstractInt create(byte[] byteValue, int offset, int len) {
         if (len - offset < 5) {
             return new Int1(byteValue, len, offset);
         }

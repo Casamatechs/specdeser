@@ -17,7 +17,7 @@ repositories {
 ext {
     jmhVersion = '1.34'
     asyncProfilerPath = '/home/carlos/Java_Tools/async-profiler-2.7-arg-linux-x64/build/libasyncProfiler.so'
-    HEAP_SIZE = '2g'
+    HEAP_SIZE = '8g'
 }
 
 dependencies {
@@ -62,11 +62,13 @@ jmh {
     benchmarkMode = ['thrpt']
     fork = 1
     warmupIterations = 15
-    warmup = '5s'
+    warmup = '10s'
     iterations = 5
-    timeOnIteration = '10s'
+    timeOnIteration = '20s'
     threads = 1
-//    profilers = ["async:libPath=${asyncProfilerPath}"]
+    profilers = ["async:libPath=${asyncProfilerPath};dir=profile-results"]
+    resultFormat='TEXT'
+    resultsFile = project.file("${project.rootDir}/results/jmh/results.txt")
 }
 
 jmhJar {

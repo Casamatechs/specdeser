@@ -2,6 +2,8 @@ package kr.sanchez.specdeser.benchmark;
 
 import kr.sanchez.specdeser.core.jakarta.AbstractParser;
 import kr.sanchez.specdeser.core.jakarta.FallbackParser;
+import org.glassfish.json.JsonParserImpl;
+import org.glassfish.json.api.BufferPool;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
@@ -17,8 +19,10 @@ public class SpeculativeBenchmark {
 
     @State(Scope.Benchmark)
     public static class StateObj {
-        public InputStream[] profileBasicJson100Keys50Constants = new InputStream[]{generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000),generateBasicJson(10000)};
-        public InputStream[] profileBasicJson100KeysAllConstants = new InputStream[]{generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000),generateStaticJson(10000)};
+        public InputStream[] profileBasicJson100Keys50Constants = new InputStream[]{generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000)};
+        public InputStream[] profileBasicJson100KeysAllConstants = new InputStream[]{generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000)};
+
+        public BufferPool bufferPool = new BufferPoolBenchmark();
     }
 
     @Benchmark
@@ -70,10 +74,34 @@ public class SpeculativeBenchmark {
     }
 
     @Benchmark
-    public void parserSpeculativeRegular(StateObj stateObj) {
+    public void parserSpeculativeFallback(StateObj stateObj) {
         try {
             InputStream in = stateObj.profileBasicJson100Keys50Constants[ThreadLocalRandom.current().nextInt(0, stateObj.profileBasicJson100Keys50Constants.length)];
             FallbackParser parser = new FallbackParser(in);
+            while (parser.hasNext()) {
+                JsonParser.Event evt = parser.next();
+                switch (evt) {
+                    case KEY_NAME, VALUE_STRING -> {
+                        parser.getString();
+                    }
+                    case VALUE_NUMBER -> {
+                        parser.getInt();
+                    }
+                    default -> {
+                    }
+                }
+            }
+            in.reset();
+        } catch (IOException e) {
+
+        }
+    }
+
+    @Benchmark
+    public void parserSpeculativeJakarta(StateObj stateObj) {
+        try {
+            InputStream in = stateObj.profileBasicJson100Keys50Constants[ThreadLocalRandom.current().nextInt(0, stateObj.profileBasicJson100Keys50Constants.length)];
+            JsonParserImpl parser = new JsonParserImpl(in, StandardCharsets.UTF_8, stateObj.bufferPool);
             while (parser.hasNext()) {
                 JsonParser.Event evt = parser.next();
                 switch (evt) {
