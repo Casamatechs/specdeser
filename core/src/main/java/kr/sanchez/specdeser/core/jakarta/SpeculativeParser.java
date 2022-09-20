@@ -15,7 +15,7 @@ public class SpeculativeParser extends AbstractParser {
 
     private int inputSize;
 
-    private final byte[] inputBuffer = new byte[BUFFER_SIZE];
+    private final byte[] inputBuffer;
 
     private final byte[] BITSHIFT = new byte[]{24,16,8,0};
 
@@ -26,19 +26,23 @@ public class SpeculativeParser extends AbstractParser {
     private final int[] speculativeTuplePosition;
     private final int[] speculativeTupleSize;
 
+    private final ByteBufferPool byteBufferPool;
+
     private int eventPtr;
     private int profilePtr;
     private int parsingPtr;
     private int speculativeTypesPtr;
 
-    public SpeculativeParser(InputStream inputStream) {
+    public SpeculativeParser(InputStream inputStream, ByteBufferPool bufferPool) {
         speculativeTuplePosition = new int[speculationPointers.length];
         speculativeTupleSize = new int[speculationPointers.length];
+        this.inputBuffer = bufferPool.take();
         this.inputStream = inputStream;
         this.eventPtr = 0;
         this.profilePtr = 0;
         this.parsingPtr = 0;
         this.speculativeTypesPtr = 0;
+        this.byteBufferPool = bufferPool;
         readStream();
         buildVectorizedIndex();
     }
@@ -121,6 +125,7 @@ public class SpeculativeParser extends AbstractParser {
 
     @Override
     public void close() {
+        this.byteBufferPool.recycle(this.inputBuffer);
         try {
             this.inputStream.close();
         } catch (IOException e) {

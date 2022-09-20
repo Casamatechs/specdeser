@@ -7,7 +7,6 @@ import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
 
 import javax.json.stream.JsonParser;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public abstract class AbstractParser implements JsonParser {
@@ -18,7 +17,7 @@ public abstract class AbstractParser implements JsonParser {
     static Integer[] speculationPointers;
 
     static VectorizedData[] vectorizedConstants;
-    final static int BUFFER_SIZE = 10 * 1024 * 1024;
+    public final static int BUFFER_SIZE = 10 * 1024 * 1024;
 
     static int invocations = 0;
     public static boolean speculationEnabled = true;
@@ -27,10 +26,10 @@ public abstract class AbstractParser implements JsonParser {
     final byte[] FALSE = new byte[]{'f', 'a', 'l', 's', 'e'};
     final byte[] NULL = new byte[]{'n', 'u', 'l', 'l'};
 
-    public static AbstractParser create(InputStream inputStream) {
+    public static AbstractParser create(InputStream inputStream, ByteBufferPool bufferPool) {
         invocations++;
         if (invocations < TH) {
-            return new ProfilingParser(inputStream);
+            return new ProfilingParser(inputStream, bufferPool);
         }
         if (invocations == TH) {
             speculationEnabled = canUseSpeculation();
@@ -40,9 +39,9 @@ public abstract class AbstractParser implements JsonParser {
             }
         }
         if (speculationEnabled) {
-            return new SpeculativeParser(inputStream);
+            return new SpeculativeParser(inputStream, bufferPool);
         } else {
-            return new FallbackParser(inputStream);
+            return new FallbackParser(inputStream, bufferPool);
         }
     }
 
@@ -56,7 +55,7 @@ public abstract class AbstractParser implements JsonParser {
     private static VectorizedData[] buildSpeculativeConstants() {
         int evtPtr = 0;
         int metaPtr = 0;
-        String constantStr = "";
+//        String constantStr = "";
         Event[] profiledEvents = ProfileCollection.getParserProfileCollection();
         MetadataValue[] profiledMetadata = ProfileCollection.getMetadataProfileCollection();
         final byte[] readVectorArray = new byte[BUFFER_SIZE];
@@ -71,8 +70,6 @@ public abstract class AbstractParser implements JsonParser {
                 if (evtPtr == profiledEvents.length -1 && readVectorPtr == 1 && readVectorArray[0] == ',') {
                     readVectorArray[0] = '}';
                 } else readVectorArray[readVectorPtr++] = '}';
-//                constantStr = evtPtr == profiledEvents.length -1 && constantStr.equals(",") ? "}" : constantStr + "}";
-//                readVectorArray[readVectorPtr++] = '}';
                 VectorizedData vectorizedData = new VectorizedData(buildVectorizedValue(readVectorArray, readVectorPtr), readVectorPtr);
                 provisionalArrayList.add(vectorizedData);
                 break; // TODO Remove this when we have real

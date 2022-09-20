@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 
 public class TestProfilingParser {
 
+    private final static ByteBufferPool bufferPool = new ByteBufferPoolTest();
+
     @BeforeEach
     void beforeFunction() {
         ProfileCollection.resetProfileCollection();
@@ -29,7 +31,7 @@ public class TestProfilingParser {
         InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
         ProfilingParser parser;
         for (int i = 0; i < 100; i++) {
-            parser = (ProfilingParser) AbstractParser.create(inputStream);
+            parser = (ProfilingParser) AbstractParser.create(inputStream, bufferPool);
             runParser(parser);
             inputStream.reset();
         }
@@ -71,11 +73,11 @@ public class TestProfilingParser {
         InputStream is1 = new ByteArrayInputStream(in1.getBytes(StandardCharsets.UTF_8));
         InputStream is2 = new ByteArrayInputStream(in2.getBytes(StandardCharsets.UTF_8));
         InputStream is3 = new ByteArrayInputStream(in3.getBytes(StandardCharsets.UTF_8));
-        ProfilingParser parser = (ProfilingParser) AbstractParser.create(is1);
+        ProfilingParser parser = (ProfilingParser) AbstractParser.create(is1, bufferPool);
         runParser(parser);
-        parser = (ProfilingParser) AbstractParser.create(is2);
+        parser = (ProfilingParser) AbstractParser.create(is2, bufferPool);
         runParser(parser);
-        parser = (ProfilingParser) AbstractParser.create(is3);
+        parser = (ProfilingParser) AbstractParser.create(is3, bufferPool);
         runParser(parser);
         MetadataValue[] collection = ProfileCollection.getMetadataProfileCollection();
         MetadataValue[] expectedValue = new MetadataValue[]{new MetadataValue(ValueType.KEY, "id", "id".getBytes(StandardCharsets.UTF_8)),
@@ -113,11 +115,11 @@ public class TestProfilingParser {
         InputStream is1 = new ByteArrayInputStream(in1.getBytes(StandardCharsets.UTF_8));
         InputStream is2 = new ByteArrayInputStream(in2.getBytes(StandardCharsets.UTF_8));
         InputStream is3 = new ByteArrayInputStream(in3.getBytes(StandardCharsets.UTF_8));
-        ProfilingParser parser = (ProfilingParser) AbstractParser.create(is1);
+        ProfilingParser parser = (ProfilingParser) AbstractParser.create(is1, bufferPool);
         runParser(parser);
-        parser = (ProfilingParser) AbstractParser.create(is2);
+        parser = (ProfilingParser) AbstractParser.create(is2, bufferPool);
         runParser(parser);
-        parser = (ProfilingParser) AbstractParser.create(is3);
+        parser = (ProfilingParser) AbstractParser.create(is3, bufferPool);
         runParser(parser);
         Assertions.assertFalse(AbstractParser.speculationEnabled);
     }

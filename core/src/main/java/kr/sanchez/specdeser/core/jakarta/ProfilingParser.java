@@ -18,8 +18,8 @@ public class ProfilingParser extends AbstractParser {
 
     private Event currentEvent;
 
-    public ProfilingParser(InputStream inputStream) {
-        this.delegate = new FallbackParser(inputStream);
+    public ProfilingParser(InputStream inputStream, ByteBufferPool bufferPool) {
+        this.delegate = new FallbackParser(inputStream, bufferPool);
         this.metadataProfilingStep = 0;
         this.currentEvent = null;
     }

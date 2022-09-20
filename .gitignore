@@ -6,3 +6,4 @@ build/
 output/
 profile-results/
 graal_dumps/
+results/

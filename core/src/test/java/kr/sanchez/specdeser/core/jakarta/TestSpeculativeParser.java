@@ -16,6 +16,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class TestSpeculativeParser {
 
+    private static ByteBufferPool bufferPool = new ByteBufferPoolTest();
+
     @Test
     void testBasicJson() throws IOException {
         String in1 = """
@@ -75,7 +77,7 @@ public class TestSpeculativeParser {
         InputStream[] is = new InputStream[]{is1,is2,is3};
         for (int i = 0; i < 333; i++) {
             for (InputStream stream: is) {
-                AbstractParser abstractParser = AbstractParser.create(stream);
+                AbstractParser abstractParser = AbstractParser.create(stream, bufferPool);
                 runParser(abstractParser);
                 stream.reset();
             }
@@ -86,11 +88,11 @@ public class TestSpeculativeParser {
         List list1 = new ArrayList();
         List list2 = new ArrayList();
         List list3 = new ArrayList();
-        AbstractParser parser = AbstractParser.create(is4);
+        AbstractParser parser = AbstractParser.create(is4, bufferPool);
         runParserAndCheck(list1,parser);
-        parser = AbstractParser.create(is5);
+        parser = AbstractParser.create(is5, bufferPool);
         runParserAndCheck(list2,parser);
-        parser = AbstractParser.create(is6);
+        parser = AbstractParser.create(is6, bufferPool);
         runParserAndCheck(list3,parser);
         Assertions.assertTrue(expected1.equals(list1) && expected2.equals(list2) && expected3.equals(list3));
     }

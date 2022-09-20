@@ -19,11 +19,10 @@ import java.util.stream.Stream;
 @SuppressWarnings("JavadocReference")
 public class FallbackParser extends AbstractParser {
 
-    //    private final byte[] auxBuffer = new byte[BUFFER_SIZE]; // TODO: This buffer will be used to store values when reading the stream again.
     final ContextStack<ContextParser> contextStack;
     Event currentEvent;
     InputStream inputStream;
-    byte[] inputBuffer = new byte[BUFFER_SIZE];
+    byte[] inputBuffer;
     int ptrBuff;
     int endBuff;
 
@@ -32,6 +31,8 @@ public class FallbackParser extends AbstractParser {
 
     final long col;
     final long line;
+
+    final ByteBufferPool byteBufferPool;
 
     NumberType numType;
     boolean minus;
@@ -44,16 +45,19 @@ public class FallbackParser extends AbstractParser {
         this.inputBuffer = inputBuffer;
         this.col = 1L;
         this.line = 1L;
+        this.byteBufferPool = new ByteBufferPoolImpl(); // It won't be used but we want to avoid null pointer exceptions.
         this.contextStack = new ContextStack<>();
     }
 
-    public FallbackParser(InputStream inputStream) {
+    public FallbackParser(InputStream inputStream, ByteBufferPool bufferPool) {
         this.minus = false;
         this.inputStream = inputStream;
         this.ptrBuff = 0;
         this.endBuff = 0;
         this.col = 1L;
         this.line = 1L;
+        this.byteBufferPool = bufferPool;
+        this.inputBuffer = bufferPool.take();
         this.contextStack = new ContextStack<>();
         this.loadIntoBuffer();
     }
@@ -141,7 +145,6 @@ public class FallbackParser extends AbstractParser {
         if (this.inputBuffer[this.ptrBuff] == ':') {
             if (this.currentEvent == Event.KEY_NAME) {
                 this.valueContext = true;
-//                this.contextStack.push(ContextParser.VALUE_CONTEXT);
                 this.ptrBuff++;
                 skipWS();
                 return this.next();
@@ -149,7 +152,6 @@ public class FallbackParser extends AbstractParser {
         }
         if (this.inputBuffer[this.ptrBuff] == ',') {
             if (this.valueContext && isValueEvent()) {
-//                this.contextStack.pop();
                 this.valueContext = false;
                 this.ptrBuff++;
                 this.currentEvent = null;
@@ -171,7 +173,6 @@ public class FallbackParser extends AbstractParser {
                 this.currentEvent = Event.VALUE_NUMBER;
             }
             case '-' -> {
-//                this.beginValuePtr = this.ptrBuff;
                 this.minus = true;
                 this.beginValuePtr = ++this.ptrBuff;
                 processNumber();
@@ -210,7 +211,6 @@ public class FallbackParser extends AbstractParser {
         }
         skipWS();
         if (this.valueContext && this.inputBuffer[this.ptrBuff] != ',') {
-//            this.contextStack.pop();
             this.valueContext = false;
         }
         return this.currentEvent;
@@ -528,6 +528,7 @@ public class FallbackParser extends AbstractParser {
      */
     @Override
     public void close() {
+        this.byteBufferPool.recycle(this.inputBuffer);
         try {
             if (this.inputStream != null) {
                 this.inputStream.close();
@@ -579,7 +580,6 @@ public class FallbackParser extends AbstractParser {
                 this.inputBuffer[this.ptrBuff] == 0x0D) {
             this.ptrBuff++;
             if (this.inputStream != null && this.ptrBuff == this.endBuff) {
-//                this.ptrBuff = 0;
                 loadIntoBuffer();
             }
             skipWS();
@@ -650,11 +650,6 @@ public class FallbackParser extends AbstractParser {
         }
     }
 
-//    private void processNegativeNumber() {// TODO: Replace this function with a more specific one
-//        this.beginValuePtr = this.ptrBuff++;
-//        processNumber();
-//    }
-
     private void processNBytes(int n) {
         this.ptrBuff += n - 1;
         this.endValuePtr += n;
@@ -697,7 +692,6 @@ public class FallbackParser extends AbstractParser {
             case 'r' -> this.inputBuffer[this.endValuePtr++] = '\r';
             case '"', '\\', '/' -> this.inputBuffer[this.endValuePtr++] = ch2;
             case 'u' -> {
-//                this.inputBuffer[this.endValuePtr++] = ch2;
                 processExtendedChar();
             }
             default -> {
@@ -756,14 +750,6 @@ public class FallbackParser extends AbstractParser {
             if (number < 0 || number > 9) return false;
         }
         return true;
-//        try {
-//            long val = ByteBuffer.wrap(this.inputBuffer, this.ptrBuff, 8).getLong();
-//            return (((val & 0xF0F0F0F0F0F0F0F0L) |
-//                    (((val + 0x0606060606060606L) & 0xF0F0F0F0F0F0F0F0L) >> 4)) ==
-//                    0x3333333333333333L);
-//        } catch (IndexOutOfBoundsException e) {
-//            return false;
-//        }
     }
 
     private boolean slowNumberCheck() {
@@ -814,7 +800,6 @@ public class FallbackParser extends AbstractParser {
     private void checkLastValueContext() {
         skipWS();
         if (this.inputBuffer[this.ptrBuff] != ',' && this.valueContext) {
-//            this.contextStack.pop();
             this.valueContext = false;
         }
     }

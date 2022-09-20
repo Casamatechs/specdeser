@@ -1,6 +1,11 @@
 package kr.sanchez.specdeser.benchmark;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonFactoryBuilder;
+import com.fasterxml.jackson.core.JsonToken;
 import kr.sanchez.specdeser.core.jakarta.AbstractParser;
+import kr.sanchez.specdeser.core.jakarta.ByteBufferPool;
+import kr.sanchez.specdeser.core.jakarta.ByteBufferPoolImpl;
 import kr.sanchez.specdeser.core.jakarta.FallbackParser;
 import org.glassfish.json.JsonParserImpl;
 import org.glassfish.json.api.BufferPool;
@@ -15,21 +20,26 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.fasterxml.jackson.core.JsonToken.*;
+
 public class SpeculativeBenchmark {
 
     @State(Scope.Benchmark)
     public static class StateObj {
-        public InputStream[] profileBasicJson100Keys50Constants = new InputStream[]{generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000),generateBasicJson(1000)};
-        public InputStream[] profileBasicJson100KeysAllConstants = new InputStream[]{generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000),generateStaticJson(1000)};
+        public InputStream[] profileBasicJson100Keys50Constants = new InputStream[]{generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000), generateBasicJson(1000)};
+        public InputStream[] profileBasicJson100KeysAllConstants = new InputStream[]{generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000), generateStaticJson(1000)};
 
-        public BufferPool bufferPool = new BufferPoolBenchmark();
+        public final BufferPool bufferPool = new BufferPoolBenchmark();
+        public final ByteBufferPool byteBufferPool = new ByteBufferPoolImpl();
+
+        public final JsonFactory jacksonFactory = new JsonFactoryBuilder().build();
     }
 
     @Benchmark
-    public void parserSpeculativeFull(StateObj stateObj) {
+    public void parserSpeculativeRandom(StateObj stateObj) {
         try {
             InputStream in = stateObj.profileBasicJson100Keys50Constants[ThreadLocalRandom.current().nextInt(0, stateObj.profileBasicJson100Keys50Constants.length)];
-            AbstractParser parser = AbstractParser.create(in);
+            AbstractParser parser = AbstractParser.create(in, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 JsonParser.Event evt = parser.next();
                 switch (evt) {
@@ -44,6 +54,7 @@ public class SpeculativeBenchmark {
                 }
             }
             in.reset();
+            parser.close();
         } catch (IOException e) {
 
         }
@@ -53,7 +64,7 @@ public class SpeculativeBenchmark {
     public void parserSpeculativeConstant(StateObj stateObj) {
         try {
             InputStream in = stateObj.profileBasicJson100KeysAllConstants[ThreadLocalRandom.current().nextInt(0, stateObj.profileBasicJson100KeysAllConstants.length)];
-            AbstractParser parser = AbstractParser.create(in);
+            AbstractParser parser = AbstractParser.create(in, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 JsonParser.Event evt = parser.next();
                 switch (evt) {
@@ -68,6 +79,7 @@ public class SpeculativeBenchmark {
                 }
             }
             in.reset();
+            parser.close();
         } catch (IOException e) {
 
         }
@@ -77,7 +89,7 @@ public class SpeculativeBenchmark {
     public void parserSpeculativeFallback(StateObj stateObj) {
         try {
             InputStream in = stateObj.profileBasicJson100Keys50Constants[ThreadLocalRandom.current().nextInt(0, stateObj.profileBasicJson100Keys50Constants.length)];
-            FallbackParser parser = new FallbackParser(in);
+            FallbackParser parser = new FallbackParser(in, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 JsonParser.Event evt = parser.next();
                 switch (evt) {
@@ -92,6 +104,7 @@ public class SpeculativeBenchmark {
                 }
             }
             in.reset();
+            parser.close();
         } catch (IOException e) {
 
         }
@@ -116,8 +129,33 @@ public class SpeculativeBenchmark {
                 }
             }
             in.reset();
+            parser.close();
         } catch (IOException e) {
 
+        }
+    }
+
+    @Benchmark
+    public void parserSpeculativeJackson(StateObj stateObj) {
+        try {
+            InputStream in = stateObj.profileBasicJson100Keys50Constants[ThreadLocalRandom.current().nextInt(0, stateObj.profileBasicJson100Keys50Constants.length)];
+            com.fasterxml.jackson.core.JsonParser parser = stateObj.jacksonFactory.createParser(in);
+            while (!parser.isClosed()) {
+                JsonToken token = parser.nextToken();
+                if (token == FIELD_NAME) {
+                    parser.getCurrentName();
+                }
+                if (token == VALUE_STRING) {
+                    parser.getValueAsString();
+                }
+                if (token == VALUE_NUMBER_INT) {
+                    parser.getValueAsInt();
+                }
+            }
+            in.reset();
+            parser.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -130,12 +168,12 @@ public class SpeculativeBenchmark {
             if (t == 0) {
                 ret.append(key).append("\"constant").append(i).append("\",");
             } else if (t == 1) {
-                ret.append(key).append("\"string").append(ThreadLocalRandom.current().nextInt(100,10000)).append("\",");
+                ret.append(key).append("\"string").append(ThreadLocalRandom.current().nextInt(100, 10000)).append("\",");
             } else if (t == 2) {
                 ret.append(key).append(i * 10 + 42).append(",");
             } else if (t == 3) {
-                ret.append(key).append(ThreadLocalRandom.current().nextInt(100,10000));
-                if (i != keys-1) {
+                ret.append(key).append(ThreadLocalRandom.current().nextInt(100, 10000));
+                if (i != keys - 1) {
                     ret.append(",");
                 }
             }
@@ -157,7 +195,7 @@ public class SpeculativeBenchmark {
                 ret.append(key).append(i * 10 + 42).append(",");
             } else if (t == 3) {
                 ret.append(key).append(i * 42 + 10);
-                if (i != keys-1) {
+                if (i != keys - 1) {
                     ret.append(",");
                 }
             }

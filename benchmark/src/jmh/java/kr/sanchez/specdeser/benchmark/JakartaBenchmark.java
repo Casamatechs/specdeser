@@ -3,6 +3,8 @@ package kr.sanchez.specdeser.benchmark;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import kr.sanchez.specdeser.core.jakarta.ByteBufferPool;
+import kr.sanchez.specdeser.core.jakarta.ByteBufferPoolImpl;
 import kr.sanchez.specdeser.core.jakarta.FallbackParser;
 import org.glassfish.json.JsonParserImpl;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -38,7 +40,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser250NumberIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.number250Json);
+            FallbackParser parser = new FallbackParser(stateObj.number250Json, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -84,7 +86,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser250StringIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.text250Json);
+            FallbackParser parser = new FallbackParser(stateObj.text250Json, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) {
@@ -130,7 +132,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser500NumberIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.number500Json);
+            FallbackParser parser = new FallbackParser(stateObj.number500Json, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -176,7 +178,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser500StringIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.text500Json);
+            FallbackParser parser = new FallbackParser(stateObj.text500Json, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) {
@@ -223,7 +225,7 @@ public class JakartaBenchmark {
     @Warmup(iterations = 10, time = 5)
     public void parser1000NumberIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.number1000Json);
+            FallbackParser parser = new FallbackParser(stateObj.number1000Json, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -292,7 +294,7 @@ public class JakartaBenchmark {
     @Warmup(iterations = 10, time = 5)
     public void parserSameKey1000NumberIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.number1000SameKeyJson);
+            FallbackParser parser = new FallbackParser(stateObj.number1000SameKeyJson, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) { // TODO Remove the switch, and just use if/else
@@ -381,7 +383,7 @@ public class JakartaBenchmark {
     @Benchmark
     public void parser1000StringIntrinsic(StateObj stateObj) {
         try {
-            FallbackParser parser = new FallbackParser(stateObj.text1000Json);
+            FallbackParser parser = new FallbackParser(stateObj.text1000Json, stateObj.byteBufferPool);
             while (parser.hasNext()) {
                 Event evt = parser.next();
                 switch (evt) {
@@ -441,6 +443,8 @@ public class JakartaBenchmark {
         public final InputStream text1000Json = generateStringsJson(1000);
 
         public final JsonFactory jsonFactory = JsonFactory.builder().disable(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES).build();
+
+        public final ByteBufferPool byteBufferPool = new ByteBufferPoolImpl();
 
     }
 

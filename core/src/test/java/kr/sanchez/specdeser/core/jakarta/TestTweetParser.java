@@ -17,7 +17,7 @@ public class TestTweetParser {
 
     @Test
     void testStringJson() throws IOException {
-        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("string.json"));
+        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("string.json"), new ByteBufferPoolImpl());
         JsonParserImpl parserImpl = new JsonParserImpl(getClass().getClassLoader().getResourceAsStream("string.json"), new BufferPoolImpl());
         List<JsonParser.Event> parserEvents = new ArrayList<>();
         List<JsonParser.Event> parserImplEvents = new ArrayList<>();
@@ -30,7 +30,7 @@ public class TestTweetParser {
 
     @Test
     void escapeByte() throws IOException {
-        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("escape.json"));
+        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("escape.json"), new ByteBufferPoolImpl());
         JsonParserImpl parserImpl = new JsonParserImpl(getClass().getClassLoader().getResourceAsStream("escape.json"), new BufferPoolImpl());
         List<JsonParser.Event> parserEvents = new ArrayList<>();
         List<JsonParser.Event> parserImplEvents = new ArrayList<>();
@@ -43,7 +43,7 @@ public class TestTweetParser {
 
     @Test
     void t1Parser() throws IOException {
-        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("emoji.json"));
+        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("emoji.json"), new ByteBufferPoolImpl());
         List<JsonParser.Event> parserEvents = new ArrayList<>();
         List<Object> parserValues = new ArrayList<>();
         runParser(parser, parserEvents, parserValues);
@@ -52,7 +52,7 @@ public class TestTweetParser {
 
     @Test
     void test1Parser() throws IOException {
-        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("test_1.json"));
+        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("test_1.json"), new ByteBufferPoolImpl());
         JsonParserImpl parserImpl = new JsonParserImpl(getClass().getClassLoader().getResourceAsStream("test_1.json"), new BufferPoolImpl());
         List<JsonParser.Event> parserEvents = new ArrayList<>();
         List<JsonParser.Event> parserImplEvents = new ArrayList<>();
@@ -65,7 +65,7 @@ public class TestTweetParser {
 
     @Test
     void testTweetParser() throws IOException {
-        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("twitter_dictionary.json"));
+        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("twitter_dictionary.json"), new ByteBufferPoolImpl());
         JsonParserImpl parserImpl = new JsonParserImpl(getClass().getClassLoader().getResourceAsStream("twitter_dictionary.json"), new BufferPoolImpl());
         List<JsonParser.Event> parserEvents = new ArrayList<>();
         List<JsonParser.Event> parserImplEvents = new ArrayList<>();
@@ -78,7 +78,7 @@ public class TestTweetParser {
 
     @Test
     void testWikiParser() throws Exception { // https://github.com/eclipse-ee4j/parsson/blob/master/impl/src/test/java/org/eclipse/parsson/tests/JsonParserTest.java#L395
-        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("wiki.json"));
+        FallbackParser parser = new FallbackParser(getClass().getClassLoader().getResourceAsStream("wiki.json"), new ByteBufferPoolImpl());
         Event event = parser.next();
         assertEquals(START_OBJECT, event);
 
