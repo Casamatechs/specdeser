@@ -7,3 +7,6 @@ output/
 profile-results/
 graal_dumps/
 results/
+bin/
+*.py
+*.ipynb

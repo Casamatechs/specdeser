@@ -157,7 +157,7 @@ public class SpeculativeParser extends AbstractParser {
                     int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3, data.i4);
                     if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
                     if (res < 0 || res > this.inputSize) {
-                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+                        throwVectorException(res);
                     }
                     else {
                         if (i < vectorizedData.data.length -1) {
@@ -171,7 +171,7 @@ public class SpeculativeParser extends AbstractParser {
                     int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3);
                     if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
                     if (res < 0 || res > this.inputSize) {
-                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+                        throwVectorException(res);
                     }
                     else this.parsingPtr = res + size;
                 }
@@ -179,7 +179,7 @@ public class SpeculativeParser extends AbstractParser {
                     int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2);
                     if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
                     if (res < 0 || res > this.inputSize) {
-                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+                        throwVectorException(res);
                     }
                     else this.parsingPtr = res + size;
                 }
@@ -187,7 +187,7 @@ public class SpeculativeParser extends AbstractParser {
                     int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1);
                     if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
                     if (res < 0 || res > this.inputSize) {
-                        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+                        throwVectorException(res);
                     }
                     else this.parsingPtr = res + size;
                 }
@@ -200,6 +200,10 @@ public class SpeculativeParser extends AbstractParser {
             }
             prevSize = _size;
         }
+    }
+
+    private void throwVectorException(int res) { // We avoid this code to be inlined, hopefully boosting performance.
+        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
     }
 
     private int getPositionOfByte(byte[] input, int startPos, byte symbol) {
@@ -270,6 +274,15 @@ public class SpeculativeParser extends AbstractParser {
         return found;
     }
 
+    /**
+     *
+     * @param input
+     * @param startPos
+     * @param i1
+     * @param i2
+     * @param i3
+     * @return
+     */
     private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3) {
         int found = -1;
         byte firstByte = (byte) (i1 >> BITSHIFT[0]);
@@ -298,6 +311,16 @@ public class SpeculativeParser extends AbstractParser {
         return found;
     }
 
+    /**
+     *
+     * @param input
+     * @param startPos
+     * @param i1
+     * @param i2
+     * @param i3
+     * @param i4
+     * @return
+     */
     private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3, int i4) {
         int found = -1;
         byte firstByte = (byte) (i1 >> BITSHIFT[0]);
