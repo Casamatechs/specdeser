@@ -55,7 +55,6 @@ public abstract class AbstractParser implements JsonParser {
     private static VectorizedData[] buildSpeculativeConstants() {
         int evtPtr = 0;
         int metaPtr = 0;
-//        String constantStr = "";
         Event[] profiledEvents = ProfileCollection.getParserProfileCollection();
         MetadataValue[] profiledMetadata = ProfileCollection.getMetadataProfileCollection();
         final byte[] readVectorArray = new byte[BUFFER_SIZE];
@@ -169,5 +168,6 @@ public abstract class AbstractParser implements JsonParser {
     public static void resetAbstractParser() {
         invocations = 0;
         speculationEnabled = true;
+        ProfileCollection.resetProfileCollection();
     }
 }

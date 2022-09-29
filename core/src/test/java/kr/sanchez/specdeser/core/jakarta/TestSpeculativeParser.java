@@ -20,6 +20,7 @@ public class TestSpeculativeParser {
 
     @Test
     void testBasicJson() throws IOException {
+        AbstractParser.resetAbstractParser();
         String in1 = """
                 {
                 "id":"foo",
@@ -94,6 +95,74 @@ public class TestSpeculativeParser {
         runParserAndCheck(list2,parser);
         parser = AbstractParser.create(is6, bufferPool);
         runParserAndCheck(list3,parser);
+        Assertions.assertTrue(expected1.equals(list1) && expected2.equals(list2) && expected3.equals(list3));
+    }
+
+    @Test
+    void testAnyJson() throws IOException {
+        AbstractParser.resetAbstractParser();
+        String in1 = """
+                {
+                "id":1,
+                "value": "Text"
+                }
+                """.replaceAll("\\s","");
+        String in2 = """
+                {
+                "id":2,
+                "value": 12345
+                }
+                """.replaceAll("\\s","");
+        String in3 = """
+                {
+                "id":3,
+                "value": true
+                }
+                """.replaceAll("\\s","");
+        InputStream is1 = new ByteArrayInputStream(in1.getBytes(StandardCharsets.UTF_8));
+        InputStream is2 = new ByteArrayInputStream(in2.getBytes(StandardCharsets.UTF_8));
+        InputStream is3 = new ByteArrayInputStream(in3.getBytes(StandardCharsets.UTF_8));
+        InputStream[] is = new InputStream[]{is1,is2,is3};
+        for (int i = 0; i < 333; i++) {
+            for (InputStream stream: is) {
+                AbstractParser abstractParser = AbstractParser.create(stream, bufferPool);
+                runParser(abstractParser);
+                stream.reset();
+            }
+        }
+        String in4 = """
+                {
+                "id":4,
+                "value": "Test"
+                }
+                """.replaceAll("\\s","");
+        String in5 = """
+                {
+                "id":5,
+                "value": 54321
+                }
+                """.replaceAll("\\s","");
+        String in6 = """
+                {
+                "id":6,
+                "value": false
+                }
+                """.replaceAll("\\s","");
+        InputStream is4 = new ByteArrayInputStream(in4.getBytes(StandardCharsets.UTF_8));
+        InputStream is5 = new ByteArrayInputStream(in5.getBytes(StandardCharsets.UTF_8));
+        InputStream is6 = new ByteArrayInputStream(in6.getBytes(StandardCharsets.UTF_8));
+        List list1 = new ArrayList();
+        List list2 = new ArrayList();
+        List list3 = new ArrayList();
+        AbstractParser parser = AbstractParser.create(is4, bufferPool);
+        runParserAndCheck(list1,parser);
+        parser = AbstractParser.create(is5, bufferPool);
+        runParserAndCheck(list2,parser);
+        parser = AbstractParser.create(is6, bufferPool);
+        runParserAndCheck(list3,parser);
+        List expected1 = Arrays.asList("{","id",4,"value","Test","}");
+        List expected2 = Arrays.asList("{","id",5,"value",54321,"}");
+        List expected3 = Arrays.asList("{","id",6,"value",false,"}");
         Assertions.assertTrue(expected1.equals(list1) && expected2.equals(list2) && expected3.equals(list3));
     }
 

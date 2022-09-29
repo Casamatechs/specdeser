@@ -55,6 +55,22 @@ public class JsonGenerators {
         return new ByteArrayInputStream(ret.toString().getBytes(StandardCharsets.UTF_8));
     }
 
+    public static InputStream generateSpotifyUser(String display_name, String href, String id, String url) {
+        StringBuilder ret = new StringBuilder("{");
+        ret.append("\"display_name\":");
+        if (display_name != null) {
+            ret.append("\"").append(display_name).append("\",");
+        } else {
+            ret.append("null,");
+        }
+        ret.append("\"href\":\"").append(href).append("\",");
+        ret.append("\"id\":\"").append(id).append("\",");
+        ret.append("\"type\":\"user\",");
+        ret.append("\"url\":\"").append(url).append("\"");
+        ret.append("}");
+        return new ByteArrayInputStream(ret.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
 //    public static InputStream fixedLengthKeysValuesJson(int keys, int lenKeys, int lenValues) {
 //        StringBuilder ret = new StringBuilder("{");
 //        for (int i = 0; i < keys; i++) {

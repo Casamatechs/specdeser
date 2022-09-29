@@ -25,6 +25,7 @@ public class TestProfilingParser {
 
     @Test
     void testBasicMetadata() throws IOException {
+        AbstractParser.resetAbstractParser();
         String inputString = """
                 {"name":"Persona","surname":"Anosrep","city":"Eindhoven","country":"Netherlands"}
                 """;
@@ -49,6 +50,7 @@ public class TestProfilingParser {
 
     @Test
     void testConstantTypeMetadata() throws IOException {
+        AbstractParser.resetAbstractParser();
         String in1 = """
                 {
                 "id":"foo",
@@ -91,6 +93,7 @@ public class TestProfilingParser {
 
     @Test
     void testDisableProfilingParser() throws IOException {
+        AbstractParser.resetAbstractParser();
         String in1 = """
                 {
                 "id":"foo",

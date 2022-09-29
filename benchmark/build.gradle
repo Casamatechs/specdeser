@@ -33,7 +33,7 @@ dependencies {
 }
 
 jmh {
-//    includes = ['parserSpeculativeKeyFixed*.',]
+//    includes = ['parserAny*.',]
 //    excludes = ['parserSpeculativeFixed*.',]
 //    jvm = '/home/carlos/Documents/Thesis/Code/graal/sdk/mxbuild/linux-amd64/GRAALJDK_CE_71C25D3E58_JAVA17/graaljdk-ce-71c25d3e58-java17-22.2.0-dev/bin/java'
     jvmArgs = [
@@ -63,8 +63,8 @@ jmh {
     benchmarkMode = ['thrpt']
     fork = 1
     warmupIterations = 5
-    warmup = '10s'
-    iterations = 10
+    warmup = '5'
+    iterations = 5
     timeOnIteration = '10s'
     threads = 1
 //    profilers = ["async:libPath=${asyncProfilerPath};dir=profile-results"]

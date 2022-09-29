@@ -87,6 +87,8 @@ public class ProfileCollection {
 
     public static void resetProfileCollection() {
         ProfileCollection.metadataRecord.clear();
+        ProfileCollection.parserEventRecord.clear();
+        ProfileCollection.ret.clear();
     }
 
     private static boolean isCompatibleType(MetadataValue parsedValue, MetadataValue currentValue) {

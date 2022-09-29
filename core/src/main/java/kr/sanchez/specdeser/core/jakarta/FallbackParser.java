@@ -619,8 +619,8 @@ public class FallbackParser extends AbstractParser {
     }
 
     private void processNumber() {
-        while (fastNaturalNumberCheck()) {
-            this.ptrBuff += 8;
+        while (this.ptrBuff < this.inputBuffer.length && fastNaturalNumberCheck()) {
+            this.ptrBuff += Math.min(8, this.inputBuffer.length - this.ptrBuff);
         }
         while (slowNumberCheck()) ;
     }
@@ -744,8 +744,8 @@ public class FallbackParser extends AbstractParser {
     /**
      * @return
      */
-    private boolean fastNaturalNumberCheck() { // TODO: This method should be replaced by an intrinsic
-        for (int i = 0; i < 8; i++) {
+    private boolean fastNaturalNumberCheck() {
+        for (int i = 0; i < Math.min(8, this.inputBuffer.length - this.ptrBuff); i++) {
             int number = this.inputBuffer[this.ptrBuff + i] - '0';
             if (number < 0 || number > 9) return false;
         }

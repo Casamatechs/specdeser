@@ -54,7 +54,20 @@ public class SpeculativeParser extends AbstractParser {
 
     @Override
     public Event next() {
-        return this.profiledEvents[this.eventPtr++];
+        Event evt = this.profiledEvents[this.eventPtr++];
+        if (evt == Event.VALUE_STRING || evt == Event.VALUE_FALSE || evt == Event.VALUE_NULL || evt == Event.VALUE_TRUE || evt == Event.VALUE_NUMBER) {
+            MetadataValue value = this.profiledMetadata[this.profilePtr];
+            if (value.type == ValueType.ANY) {
+                Event realEvt = detectRealEvent(this.speculativeTuplePosition[this.speculativeTypesPtr], this.speculativeTupleSize[this.speculativeTypesPtr]);
+                if (realEvt == null) throwParsingException();
+                if (realEvt == Event.VALUE_NULL || realEvt == Event.VALUE_FALSE || realEvt == Event.VALUE_TRUE) {
+                    this.speculativeTypesPtr++;
+                    this.profilePtr++;
+                }
+                return realEvt;
+            }
+        }
+        return evt;
     }
 
     @Override
@@ -66,14 +79,12 @@ public class SpeculativeParser extends AbstractParser {
         MetadataValue value = profiledMetadata[this.profilePtr++];
         if (value.type == ValueType.STRING_CONSTANT) {
             return value.stringValue;
-        } else if (value.type == ValueType.STRING_TYPE) {
+        } else if (value.type == ValueType.STRING_TYPE || value.type == ValueType.ANY) {
             int initialBufferPosition = this.speculativeTuplePosition[this.speculativeTypesPtr];
             int size = this.speculativeTupleSize[this.speculativeTypesPtr++];
             return new String(this.inputBuffer, initialBufferPosition+1, size-2);
-        } else if (value.type == ValueType.ANY) {
-            // TODO
-            return "";
-        } else {
+        }
+        else {
             throw new RuntimeException("Big boom");
         }
     }
@@ -88,12 +99,10 @@ public class SpeculativeParser extends AbstractParser {
         MetadataValue value = profiledMetadata[this.profilePtr++];
         if (value.type == ValueType.INT_CONSTANT) {
             return value.intValue;
-        } else if (value.type == ValueType.INT_TYPE) {
+        } else if (value.type == ValueType.INT_TYPE || value.type == ValueType.ANY) {
             return calcSpeculativeInt();
-        } else if (value.type == ValueType.ANY) {
-            // TODO
-            return -1;
-        } else {
+        }
+        else {
             throw new RuntimeException("Big boom");
         }
     }
@@ -351,5 +360,39 @@ public class SpeculativeParser extends AbstractParser {
             }
         }
         return found;
+    }
+
+    private Event detectRealEvent(int initialPos, int size) {
+        byte b1 = this.inputBuffer[initialPos++];
+        switch (b1) {
+            case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-' -> {
+                boolean isNumber = true;
+                for (int i = initialPos; isNumber && i < initialPos + size-1; i++) {
+                    isNumber = this.inputBuffer[i] >= '0' && this.inputBuffer[i] <= '9';
+                }
+                if (isNumber) return Event.VALUE_NUMBER;
+            }
+            case '"' -> {
+                if (this.inputBuffer[initialPos + size -2] == '"') return Event.VALUE_STRING; // Assumption that this is a correct string.
+            }
+            case 'f' -> {
+                if (size == 5 && this.inputBuffer[initialPos++] == 'a' && this.inputBuffer[initialPos++] == 'l' &&
+                        this.inputBuffer[initialPos++] == 's' && this.inputBuffer[initialPos++] == 'e') return Event.VALUE_FALSE;
+
+            }
+            case 't' -> {
+                if (size == 4 && this.inputBuffer[initialPos++] == 'r' && this.inputBuffer[initialPos++] == 'u' &&
+                        this.inputBuffer[initialPos++] == 'e') return Event.VALUE_TRUE;
+            }
+            case 'n' -> {
+                if (size == 4 && this.inputBuffer[initialPos++] == 'u' && this.inputBuffer[initialPos++] == 'l' &&
+                        this.inputBuffer[initialPos++] == 'l') return Event.VALUE_NULL;
+            }
+        }
+        return null;
+    }
+
+    private void throwParsingException() {
+        throw new RuntimeException("Parsing Exception");
     }
 }
