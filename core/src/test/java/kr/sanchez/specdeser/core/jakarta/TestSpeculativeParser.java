@@ -166,6 +166,86 @@ public class TestSpeculativeParser {
         Assertions.assertTrue(expected1.equals(list1) && expected2.equals(list2) && expected3.equals(list3));
     }
 
+    @Test
+    void testPolymorphJson() throws IOException{
+        AbstractParser.resetAbstractParser();
+        String in1 = """
+                {
+                "id":1,
+                "value": "Text1",
+                "poli": "a",
+                "const": 1234
+                }
+                """.replaceAll("\\s","");
+        String in2 = """
+                {
+                "id":2,
+                "value": "Text2",
+                "poli": 123,
+                "const": 1234
+                }
+                """.replaceAll("\\s","");
+        String in3 = """
+                {
+                "id":3,
+                "value": "Text3",
+                "poli": true,
+                "const": 1234
+                }
+                """.replaceAll("\\s","");
+        InputStream is1 = new ByteArrayInputStream(in1.getBytes(StandardCharsets.UTF_8));
+        InputStream is2 = new ByteArrayInputStream(in2.getBytes(StandardCharsets.UTF_8));
+        InputStream is3 = new ByteArrayInputStream(in3.getBytes(StandardCharsets.UTF_8));
+        InputStream[] is = new InputStream[]{is1,is2,is3};
+        for (int i = 0; i < 333; i++) {
+            for (InputStream stream: is) {
+                AbstractParser abstractParser = AbstractParser.create(stream, bufferPool);
+                runParser(abstractParser);
+                stream.reset();
+            }
+        }
+        String in4 = """
+                {
+                "id":4,
+                "value": "Text4",
+                "poli": false,
+                "const": 1234
+                }
+                """.replaceAll("\\s","");
+        String in5 = """
+                {
+                "id":5,
+                "value": "Text5",
+                "poli": null,
+                "const": 1234
+                }
+                """.replaceAll("\\s","");
+        String in6 = """
+                {
+                "id":6,
+                "value": "Text6",
+                "poli": "string",
+                "const": 1234
+                }
+                """.replaceAll("\\s","");
+        InputStream is4 = new ByteArrayInputStream(in4.getBytes(StandardCharsets.UTF_8));
+        InputStream is5 = new ByteArrayInputStream(in5.getBytes(StandardCharsets.UTF_8));
+        InputStream is6 = new ByteArrayInputStream(in6.getBytes(StandardCharsets.UTF_8));
+        List list1 = new ArrayList();
+        List list2 = new ArrayList();
+        List list3 = new ArrayList();
+        AbstractParser parser = AbstractParser.create(is4, bufferPool);
+        runParserAndCheck(list1,parser);
+        parser = AbstractParser.create(is5, bufferPool);
+        runParserAndCheck(list2,parser);
+        parser = AbstractParser.create(is6, bufferPool);
+        runParserAndCheck(list3,parser);
+        List expected1 = Arrays.asList("{","id",4,"value","Text4","poli",false,"const",1234,"}");
+        List expected2 = Arrays.asList("{","id",5,"value","Text5","poli",null,"const",1234,"}");
+        List expected3 = Arrays.asList("{","id",6,"value","Text6","poli","string","const",1234,"}");
+        Assertions.assertTrue(expected1.equals(list1) && expected2.equals(list2) && expected3.equals(list3));
+    }
+
     private void runParser(JsonParser parser) throws IOException {
         while(parser.hasNext()) {
             JsonParser.Event evt = parser.next();

@@ -33,13 +33,16 @@ dependencies {
 }
 
 jmh {
-//    includes = ['parserAny*.',]
+    includes = ['test*.',]
 //    excludes = ['parserSpeculativeFixed*.',]
 //    jvm = '/home/carlos/Documents/Thesis/Code/graal/sdk/mxbuild/linux-amd64/GRAALJDK_CE_71C25D3E58_JAVA17/graaljdk-ce-71c25d3e58-java17-22.2.0-dev/bin/java'
     jvmArgs = [
             '-server',
             // Debug flags
 //            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005",
+            // JVM Flags
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:+EnableJVMCI",
             // GraalVM Flags
             "-Dgraal.CompilationFailureAction=Diagnose",
             "-Dgraal.DumpOnError=true",
@@ -47,15 +50,12 @@ jmh {
             "-Dgraal.PrintGraph=Network",
             "-Dgraal.ObjdumpExecutables=objdump,gobjdump",
             "-Dgraalvm.locatorDisabled=true",
-            // JVM Flags
-            "-XX:+UnlockExperimentalVMOptions",
-            "-XX:+EnableJVMCI",
-            "-XX:+UseJVMCICompiler",
             "-XX:AutoBoxCacheMax=20000",
             "-XX:+UseBiasedLocking",
             "-XX:BiasedLockingStartupDelay=500",
             "-Xms${HEAP_SIZE}",
             "-Xmx${HEAP_SIZE}",
+            "-XX:+UseJVMCICompiler",
             // Graal Compiling Graphs
 //            '-Dgraal.Dump=:2',
 //            '-Dgraal.MethodFilter=kr.sanchez.specdeser.core.jakarta.*.*,org.glassfish.json.*.*,com.fasterxml.jackson.core.UTF8StreamJsonParser.*'

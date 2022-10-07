@@ -155,6 +155,7 @@ public class SpeculativeParser extends AbstractParser {
         int variableIdx = 0;
         int prevInitialPtr = 0;
         int prevSize = 0;
+        int metaPtr = 0;
         for (int j = 0; j < vectorizedConstants.length; j++) {
             VectorizedData vectorizedData = vectorizedConstants[j];
             int size = vectorizedData.size;
@@ -203,11 +204,44 @@ public class SpeculativeParser extends AbstractParser {
             }
             if (variableIdx++ != 0) {
                 int start = prevInitialPtr + prevSize;
+                metaPtr = findNoConstantMeta(metaPtr);
+                ValueType type = profiledMetadata[metaPtr].type;
                 this.speculativeTuplePosition[variableIdx-2] = start;
                 this.speculativeTupleSize[variableIdx-2] = currentPtr - start;
+                checkCorrectType(type, start, currentPtr - start, metaPtr);
                 prevInitialPtr = currentPtr;
             }
             prevSize = _size;
+        }
+    }
+
+    private int findNoConstantMeta(int idx) {
+        for (; idx < this.profiledMetadata.length;) {
+            ValueType type = profiledMetadata[idx].type;
+            if (type == ValueType.BOOLEAN_TYPE || type == ValueType.INT_TYPE || type == ValueType.STRING_TYPE || type == ValueType.ANY) {
+                return idx;
+            }
+            idx++;
+        }
+        return -1;
+    }
+
+    private void checkCorrectType(ValueType type, int buffPtr, int size, int metaPtr) {
+        if (type == ValueType.STRING_TYPE) {
+            if (this.inputBuffer[buffPtr] != '"' || this.inputBuffer[buffPtr+size-1] != '"') {
+                AbstractParser.speculationEnabled = false;
+            }
+            // Don't do anything? Convert to constant?
+        }
+        else if (type == ValueType.INT_TYPE) {
+            if (this.inputBuffer[buffPtr] < '0' || this.inputBuffer[buffPtr] > '9' || this.inputBuffer[buffPtr] != '-') {
+                AbstractParser.speculationEnabled = false;
+            }
+        }
+        else if (type == ValueType.BOOLEAN_TYPE) {
+            if (size < 4 || size > 5) {
+                AbstractParser.speculationEnabled = false;
+            }
         }
     }
 
