@@ -3,10 +3,12 @@ package kr.sanchez.specdeser.core.jakarta;
 import kr.sanchez.specdeser.core.jakarta.exception.InputReadException;
 import kr.sanchez.specdeser.core.jakarta.metadata.*;
 import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
+import sun.misc.Unsafe;
 
 import javax.json.stream.JsonLocation;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 
 public class SpeculativeParser extends AbstractParser {
@@ -32,6 +34,22 @@ public class SpeculativeParser extends AbstractParser {
     private int profilePtr;
     private int parsingPtr;
     private int speculativeTypesPtr;
+
+    private static final Unsafe UNSAFE = getUnsafe();
+
+    private static Unsafe getUnsafe() {
+        try {
+            return Unsafe.getUnsafe();
+        } catch (SecurityException e1) {
+            try {
+                Field theUnsafeInstance = Unsafe.class.getDeclaredField("theUnsafe");
+                theUnsafeInstance.setAccessible(true);
+                return (Unsafe) theUnsafeInstance.get(Unsafe.class);
+            } catch (Exception e2) {
+                throw new RuntimeException("exception while trying to get Unsafe.theUnsafe via reflection:", e2);
+            }
+        }
+    }
 
     public SpeculativeParser(InputStream inputStream, ByteBufferPool bufferPool) {
         speculativeTuplePosition = new int[speculationPointers.length];
@@ -153,43 +171,43 @@ public class SpeculativeParser extends AbstractParser {
             int currentPtr = -1;
             for (int i = 0; i < vectorizedData.data.length; i++) {
                 AbstractInt data = vectorizedData.data[i];
-                if (data instanceof Int4) {
-                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3, data.i4);
+//                if (data instanceof Int4) {
+//                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3, data.i4);
+//                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
+//                    if (res < 0 || res > this.inputSize) {
+//                        throwVectorException(res);
+//                    }
+//                    else {
+//                        if (i < vectorizedData.data.length -1) {
+//                            this.parsingPtr += 16;
+//                            size -= 16;
+//                        }
+//                        else this.parsingPtr = res + size;
+//                    }
+//                }
+//                else if (data instanceof Int3) {
+//                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3);
+//                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
+//                    if (res < 0 || res > this.inputSize) {
+//                        throwVectorException(res);
+//                    }
+//                    else this.parsingPtr = res + size;
+//                }
+                if (data instanceof Int2) {
+                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, this.inputSize, data.i1, data.i2);
                     if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
                     if (res < 0 || res > this.inputSize) {
                         throwVectorException(res);
                     }
-                    else {
-                        if (i < vectorizedData.data.length -1) {
-                            this.parsingPtr += 16;
-                            size -= 16;
-                        }
-                        else this.parsingPtr = res + size;
-                    }
-                }
-                else if (data instanceof Int3) {
-                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2, data.i3);
-                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
-                    if (res < 0 || res > this.inputSize) {
-                        throwVectorException(res);
-                    }
-                    else this.parsingPtr = res + size;
-                }
-                else if (data instanceof Int2) {
-                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1, data.i2);
-                    if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
-                    if (res < 0 || res > this.inputSize) {
-                        throwVectorException(res);
-                    }
-                    else this.parsingPtr = res + size;
+                    else this.parsingPtr = res + 2;
                 }
                 else {
-                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, data.i1);
+                    int res = indexOfConstant(this.inputBuffer, this.parsingPtr, this.inputSize, data.i1);
                     if (i == 0 && res >= 0 && res <= this.inputSize) this.parsingPtr = currentPtr = res;
                     if (res < 0 || res > this.inputSize) {
                         throwVectorException(res);
                     }
-                    else this.parsingPtr = res + size;
+                    else this.parsingPtr = res + 1;
                 }
             }
             if (variableIdx++ != 0) {
@@ -203,7 +221,7 @@ public class SpeculativeParser extends AbstractParser {
     }
 
     private void throwVectorException(int res) { // We avoid this code to be inlined, hopefully boosting performance.
-        throw new RuntimeException("Crash during vectorized checking. Index was: " + res);
+        throw new RuntimeException("Crash during vectorized checking.Index was: " + res + "\n");
     }
 
     private int getPositionOfByte(byte[] input, int startPos, byte symbol) {
@@ -222,24 +240,32 @@ public class SpeculativeParser extends AbstractParser {
      * @return
      */
 
-    private int indexOfConstant(byte[] input, int startPos, int i1) {
-        int found = -1;
-        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
-        while (startPos < this.inputSize) {
-            startPos = getPositionOfByte(input, startPos, firstByte);
-            int ptr = startPos -1;
-            boolean match = true;
-            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i1 >> BITSHIFT[i]);
-                if (b == 0) break;
-                match = b == input[startPos++];
-            }
-            if (match) {
-                found = ptr;
-                break;
-            }
+    private int indexOfConstant(byte[] input, int startPos, int inputSize, int i1) {
+        for (int i = startPos; i < inputSize; i++) {
+            if (input[i] == i1) return i;
         }
-        return found;
+        return -1;
+//        int found = -1;
+//        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+//        while (startPos < this.inputSize) {
+//            startPos = getPositionOfByte(input, startPos, firstByte);
+//            int ptr = startPos -1;
+//            boolean match = true;
+//            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i1 >> BITSHIFT[i]);
+//                if (b == 0) break;
+//                match = b == input[startPos++];
+//            }
+//            if (match) {
+//                found = ptr;
+//                break;
+//            }
+//        }
+//        return found;
+    }
+
+    private static int indexOfConstant(byte[] input, int startPos, int inputSize, int i1, int i2) {
+        return indexOfConstant(null, input, 16L, inputSize, 0, false, startPos, i1, i2);
     }
 
     /**
@@ -250,106 +276,122 @@ public class SpeculativeParser extends AbstractParser {
      * @param i2
      * @return
      */
-    private int indexOfConstant(byte[] input, int startPos, int i1, int i2) {
-        int found = -1;
-        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
-        while (startPos < this.inputSize) {
-            startPos = getPositionOfByte(input, startPos, firstByte);
-            int ptr = startPos -1;
-            boolean match = true;
-            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i1 >> BITSHIFT[i]);
-                match = b == input[startPos++];
-            }
-            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i2 >> BITSHIFT[i]);
-                if (b == 0) break;
-                match = b == input[startPos++];
-            }
-            if (match) {
-                found = ptr;
-                break;
-            }
+    private static int indexOfConstant(Object location, byte[] array, long offset, int length, int stride, boolean isNative, int fromIndex, int i1, int i2) {
+        for (int i = fromIndex + 1; i < length; i++) {
+            if (readValue(array, offset, stride, i - 1, isNative) == i1 && readValue(array, offset, stride, i, isNative) == i2) return i-1;
         }
-        return found;
+        return -1;
+//        int found = -1;
+//        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+//        while (startPos < this.inputSize) {
+//            startPos = getPositionOfByte(input, startPos, firstByte);
+//            int ptr = startPos -1;
+//            boolean match = true;
+//            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i1 >> BITSHIFT[i]);
+//                match = b == input[startPos++];
+//            }
+//            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i2 >> BITSHIFT[i]);
+//                if (b == 0) break;
+//                match = b == input[startPos++];
+//            }
+//            if (match) {
+//                found = ptr;
+//                break;
+//            }
+//        }
+//        return found;
     }
 
-    /**
-     *
-     * @param input
-     * @param startPos
-     * @param i1
-     * @param i2
-     * @param i3
-     * @return
-     */
-    private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3) {
-        int found = -1;
-        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
-        while (startPos < this.inputSize) {
-            startPos = getPositionOfByte(input, startPos, firstByte);
-            int ptr = startPos -1;
-            boolean match = true;
-            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i1 >> BITSHIFT[i]);
-                match = b == input[startPos++];
-            }
-            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i2 >> BITSHIFT[i]);
-                match = b == input[startPos++];
-            }
-            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i3 >> BITSHIFT[i]);
-                if (b == 0) break;
-                match = b == input[startPos++];
-            }
-            if (match) {
-                found = ptr;
-                break;
-            }
-        }
-        return found;
+    private static int readValue(byte[] array, long offset, int stride, int i, boolean isNative) {
+                    return runReadS0Managed(array, offset + i);
     }
 
-    /**
-     *
-     * @param input
-     * @param startPos
-     * @param i1
-     * @param i2
-     * @param i3
-     * @param i4
-     * @return
-     */
-    private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3, int i4) {
-        int found = -1;
-        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
-        while (startPos < this.inputSize) {
-            startPos = getPositionOfByte(input, startPos, firstByte);
-            int ptr = startPos -1;
-            boolean match = true;
-            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i1 >> BITSHIFT[i]);
-                match = b == input[startPos++];
-            }
-            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i2 >> BITSHIFT[i]);
-                match = b == input[startPos++];
-            }
-            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i3 >> BITSHIFT[i]);
-                match = b == input[startPos++];
-            }
-            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
-                byte b = (byte) (i4 >> BITSHIFT[i]);
-                if (b == 0) break;
-                match = b == input[startPos++];
-            }
-            if (match) {
-                found = ptr;
-                break;
-            }
-        }
-        return found;
+    private static int runReadS0Managed(byte[] array, long byteOffset) {
+        return uInt(UNSAFE.getByte(array, byteOffset));
     }
+
+    private static int uInt(byte value) {
+        return Byte.toUnsignedInt(value);
+    }
+
+//    /**
+//     *
+//     * @param input
+//     * @param startPos
+//     * @param i1
+//     * @param i2
+//     * @param i3
+//     * @return
+//     */
+//    private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3) {
+//        int found = -1;
+//        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+//        while (startPos < this.inputSize) {
+//            startPos = getPositionOfByte(input, startPos, firstByte);
+//            int ptr = startPos -1;
+//            boolean match = true;
+//            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i1 >> BITSHIFT[i]);
+//                match = b == input[startPos++];
+//            }
+//            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i2 >> BITSHIFT[i]);
+//                match = b == input[startPos++];
+//            }
+//            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i3 >> BITSHIFT[i]);
+//                if (b == 0) break;
+//                match = b == input[startPos++];
+//            }
+//            if (match) {
+//                found = ptr;
+//                break;
+//            }
+//        }
+//        return found;
+//    }
+//
+//    /**
+//     *
+//     * @param input
+//     * @param startPos
+//     * @param i1
+//     * @param i2
+//     * @param i3
+//     * @param i4
+//     * @return
+//     */
+//    private int indexOfConstant(byte[] input, int startPos, int i1, int i2, int i3, int i4) {
+//        int found = -1;
+//        byte firstByte = (byte) (i1 >> BITSHIFT[0]);
+//        while (startPos < this.inputSize) {
+//            startPos = getPositionOfByte(input, startPos, firstByte);
+//            int ptr = startPos -1;
+//            boolean match = true;
+//            for (int i = 1; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i1 >> BITSHIFT[i]);
+//                match = b == input[startPos++];
+//            }
+//            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i2 >> BITSHIFT[i]);
+//                match = b == input[startPos++];
+//            }
+//            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i3 >> BITSHIFT[i]);
+//                match = b == input[startPos++];
+//            }
+//            for (int i = 0; match && i < 4 && startPos < this.inputSize; i++) {
+//                byte b = (byte) (i4 >> BITSHIFT[i]);
+//                if (b == 0) break;
+//                match = b == input[startPos++];
+//            }
+//            if (match) {
+//                found = ptr;
+//                break;
+//            }
+//        }
+//        return found;
+//    }
 }

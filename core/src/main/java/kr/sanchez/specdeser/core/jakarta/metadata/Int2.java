@@ -6,9 +6,11 @@ public class Int2 extends Int1{
 //    public int i2 = 0;
 
     public Int2(byte[] value, int size, int offset) {
-        super(value, offset + 4, offset);
-        for (int i = 4 + offset; i < size; i++) {
-            i2 = i2 | (value[i] & 0xFF) << BITSHIFT[i % 4];
-        }
+//        super(value, offset + 4, offset);
+//        for (int i = 4 + offset; i < size; i++) {
+//            i2 = i2 | (value[i] & 0xFF) << BITSHIFT[i % 4];
+//        }
+        super(value, size, offset);
+        i2 = Byte.toUnsignedInt(value[offset + 1]);
     }
 }

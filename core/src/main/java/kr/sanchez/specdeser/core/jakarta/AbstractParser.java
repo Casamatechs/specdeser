@@ -41,6 +41,7 @@ public abstract class AbstractParser implements JsonParser {
         if (speculationEnabled) {
             return new SpeculativeParser(inputStream, bufferPool);
         } else {
+            System.err.println("OH NO SOMETHING WENT WRONG");
             return new FallbackParser(inputStream, bufferPool);
         }
     }
@@ -153,12 +154,12 @@ public abstract class AbstractParser implements JsonParser {
     }
 
     private static AbstractInt[] buildVectorizedValue(byte[] byteArray, int size) {
-        AbstractInt[] res = size % 16 == 0 ? new AbstractInt[size/16] : new AbstractInt[size/16 + 1];
+        AbstractInt[] res = size % 2 == 0 ? new AbstractInt[size/2] : new AbstractInt[size/2 + 1];
         int arrPtr, resPtr;
         arrPtr = resPtr = 0;
-        while (size - arrPtr >= 16) {
+        while (size - arrPtr >= 2) {
             res[resPtr++] = AbstractInt.create(byteArray, arrPtr, size);
-            arrPtr += 16;
+            arrPtr += 2;
         }
         if (resPtr < res.length) res[resPtr] = AbstractInt.create(byteArray, arrPtr, size);
         return res;

@@ -33,7 +33,7 @@ dependencies {
 }
 
 jmh {
-//    includes = ['parserSpeculativeKeyFixed*.',]
+    includes = ['parserSpeculativeRandom*.',]
 //    excludes = ['parserSpeculativeFixed*.',]
 //    jvm = '/home/carlos/Documents/Thesis/Code/graal/sdk/mxbuild/linux-amd64/GRAALJDK_CE_71C25D3E58_JAVA17/graaljdk-ce-71c25d3e58-java17-22.2.0-dev/bin/java'
     jvmArgs = [
@@ -69,7 +69,7 @@ jmh {
     threads = 1
 //    profilers = ["async:libPath=${asyncProfilerPath};dir=profile-results"]
     resultFormat='CSV'
-    resultsFile = project.file("${project.buildDir}/results/jmh/results-fixed.csv")
+    resultsFile = project.file("results/jmh/results-simd-disabled.csv")
 }
 
 jmhJar {
