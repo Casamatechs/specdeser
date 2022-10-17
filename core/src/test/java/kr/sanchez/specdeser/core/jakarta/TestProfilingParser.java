@@ -12,6 +12,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class TestProfilingParser {
 
@@ -27,11 +28,11 @@ public class TestProfilingParser {
     void testBasicMetadata() throws IOException {
         String inputString = """
                 {"name":"Persona","surname":"Anosrep","city":"Eindhoven","country":"Netherlands"}
-                """;
+                """.replaceAll("\\s","");
         InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
-        ProfilingParser parser;
+        AbstractParser parser;
         for (int i = 0; i < 100; i++) {
-            parser = (ProfilingParser) AbstractParser.create(inputStream, bufferPool);
+            parser = AbstractParser.create(inputStream, bufferPool);
             runParser(parser);
             inputStream.reset();
         }

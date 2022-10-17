@@ -1,7 +1,5 @@
 .idea/
 .gradle/
-gradle/
-gradlew*
 build/
 output/
 profile-results/

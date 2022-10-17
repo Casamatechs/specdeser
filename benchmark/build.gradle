@@ -33,9 +33,10 @@ dependencies {
 }
 
 jmh {
-//    includes = ['parserSpeculativeKeyFixed*.',]
-//    excludes = ['parserSpeculativeFixed*.',]
-//    jvm = '/home/carlos/Documents/Thesis/Code/graal/sdk/mxbuild/linux-amd64/GRAALJDK_CE_71C25D3E58_JAVA17/graaljdk-ce-71c25d3e58-java17-22.2.0-dev/bin/java'
+    includes = [
+//            'parserSpeculativeRandom10*|parserSpeculativeConstant10*|parserSpeculative(Fixed|KeyFixed)10Keys10*LengthSpeculative',
+            'intrMicro_(Simd)?equals'
+    ]
     jvmArgs = [
             '-server',
             // Debug flags
@@ -62,14 +63,14 @@ jmh {
             ]
     benchmarkMode = ['thrpt']
     fork = 1
-    warmupIterations = 5
-    warmup = '10s'
-    iterations = 10
-    timeOnIteration = '10s'
+    warmupIterations = 3
+    warmup = '5s'
+    iterations = 5
+    timeOnIteration = '5s'
     threads = 1
 //    profilers = ["async:libPath=${asyncProfilerPath};dir=profile-results"]
     resultFormat='CSV'
-    resultsFile = project.file("${project.buildDir}/results/jmh/results-fixed.csv")
+    resultsFile = project.file("results/jmh/test_simd.csv")
 }
 
 jmhJar {

@@ -4,19 +4,23 @@ import java.util.Arrays;
 
 public class VectorizedData {
 
-    public final AbstractInt[] data;
+    public final AbstractInt firstPair;
+
+    public final byte[] arrayData;
 
     public final int size;
 
-    public VectorizedData(AbstractInt[] data, int size) {
-        this.data = data;
-        this.size = size;
+    public VectorizedData(AbstractInt firstPair, byte[] arrayData) {
+        this.firstPair = firstPair;
+        this.arrayData = arrayData;
+        this.size = arrayData.length;
     }
 
     @Override
     public String toString() {
         return "VectorizedData{" +
-                "data=" + Arrays.toString(data) +
+                "firstPair=" + firstPair +
+                ", arrayData=" + Arrays.toString(arrayData) +
                 ", size=" + size +
                 '}';
     }

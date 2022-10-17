@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
-@SuppressWarnings("JavadocReference")
 public class FallbackParser extends AbstractParser {
 
     final ContextStack<ContextParser> contextStack;
@@ -45,7 +44,7 @@ public class FallbackParser extends AbstractParser {
         this.inputBuffer = inputBuffer;
         this.col = 1L;
         this.line = 1L;
-        this.byteBufferPool = new ByteBufferPoolImpl(); // It won't be used but we want to avoid null pointer exceptions.
+        this.byteBufferPool = new ByteBufferPoolImpl();
         this.contextStack = new ContextStack<>();
     }
 
@@ -640,7 +639,7 @@ public class FallbackParser extends AbstractParser {
                 readEscaped = true;
                 processEscapedChar();
                 continueEscapedProcess();
-            } else if (ch < 0) { // Multiple byte UTF-8 encoding. TODO: Check every byte is correct (must be done with the intrinsic)
+            } else if (ch < 0) { // Multiple byte UTF-8 encoding.
                 ch = (byte) ((ch & 0xFF) >>> 3);
                 if (ch >= 24 && ch < 28) processNBytes(2);
                 else if (ch < 30) processNBytes(3);
@@ -672,7 +671,7 @@ public class FallbackParser extends AbstractParser {
                 this.inputBuffer[this.endValuePtr++] = ch;
             } else if (ch == 0x5c) {
                 processEscapedChar();
-            } else if (ch < 0) { // Multiple byte UTF-8 encoding. TODO: Check every byte is correct (must be done with the intrinsic)
+            } else if (ch < 0) { // Multiple byte UTF-8 encoding.
                 ch = (byte) ((ch & 0xFF) >>> 3);
                 if (ch >= 24 && ch < 28) processNBytesEscaped(2);
                 else if (ch < 30) processNBytesEscaped(3);
@@ -705,7 +704,7 @@ public class FallbackParser extends AbstractParser {
         return ch >= 0x20 && ch != 0x22 && ch != 0x5c;
     }
 
-    private void processExtendedChar() { // TODO: Check how to do this correctly, not relying on expensive methods.
+    private void processExtendedChar() {
         char c1 = buildUnicodeChar();
         if (this.inputBuffer[this.ptrBuff] != 0x5c || this.inputBuffer[this.ptrBuff + 1] != 'u') { // We dont want to move the pointer in case there's not a second unicode character
             String str = String.valueOf(c1);
@@ -741,10 +740,7 @@ public class FallbackParser extends AbstractParser {
         return (char) c;
     }
 
-    /**
-     * @return
-     */
-    private boolean fastNaturalNumberCheck() { // TODO: This method should be replaced by an intrinsic
+    private boolean fastNaturalNumberCheck() {
         for (int i = 0; i < 8; i++) {
             int number = this.inputBuffer[this.ptrBuff + i] - '0';
             if (number < 0 || number > 9) return false;

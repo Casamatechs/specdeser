@@ -1,13 +1,15 @@
+## Pre-requisites
+To run the benchmarks the following dependencies are needed:
+
+- JDK17+ (with `$JAVA_HOME` variable configured)
+- [Async profiler](https://github.com/jvm-profiling-tools/async-profiler) in case profiling is activated. By default it is deactivated.
+- ENV variable `$GRAAL_COMPILER` pointing to your Graal compiler root folder.
+
 ## How to run the benchmarks.
 
 In the root of the project execute the command. 
 
 `./gradlew [clean] jmh`
-
-To run the benchmarks the following dependencies are needed:
-
-- JDK17+ (with `$JAVA_HOME` variable configured)
-- [Async profiler](https://github.com/jvm-profiling-tools/async-profiler) in case profiling is activated. By default it is deactivated.
 
 ## How to configure the benchmark environment
 
