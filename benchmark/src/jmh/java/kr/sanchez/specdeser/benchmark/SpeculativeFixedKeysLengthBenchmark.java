@@ -2,6 +2,7 @@ package kr.sanchez.specdeser.benchmark;
 
 import com.fasterxml.jackson.core.JsonToken;
 import kr.sanchez.specdeser.core.jakarta.AbstractParser;
+import kr.sanchez.specdeser.core.jakarta.SpeculativeParser;
 import kr.sanchez.specdeser.core.util.JsonGenerators;
 import org.glassfish.json.JsonParserImpl;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -12,6 +13,7 @@ import javax.json.stream.JsonParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.fasterxml.jackson.core.JsonToken.*;
@@ -25,6 +27,103 @@ public class SpeculativeFixedKeysLengthBenchmark {
         public InputStream[] profileBasicJson10Keys1000Length = generateFixedKeyJson(10, 10, 1000);
         public InputStream[] profileBasicJson10Keys10000Length = generateFixedKeyJson(10, 10, 10000);
         public InputStream[] profileBasicJson10Keys100000Length = generateFixedKeyJson(10, 10, 100000);
+    }
+
+    public static void main(String[] args) {
+        InputStream inJakarta = new StateObj().profileBasicJson10Keys100Length[ThreadLocalRandom.current().nextInt(0, 10)];
+        JsonParser.Event[] jakartaTokens = new JsonParser.Event[22];
+        Object[] jakartaObjects = new Object[20];
+        JsonParser.Event[] speculativeTokens = new JsonParser.Event[22];
+        Object[] speculativeObjects = new Object[20];
+        generateJakartaInfo(inJakarta, jakartaTokens, jakartaObjects);
+        runProfiling();
+        generateSpeculativeInfo(inJakarta, speculativeTokens, speculativeObjects);
+        if (Arrays.equals(jakartaTokens, speculativeTokens) && Arrays.equals(jakartaTokens, speculativeTokens)) {
+            System.out.println("Test passed");
+            System.exit(0);
+        } else {
+            System.err.println("Test not passed");
+            System.exit(1);
+        }
+    }
+
+    private static void generateJakartaInfo(InputStream input, JsonParser.Event[] tokenArray, Object[] objectsArray) {
+        int tokPtr = 0;
+        int objPtr = 0;
+        JsonParserImpl parser = new JsonParserImpl(input, StandardCharsets.UTF_8, SpeculativeKeysBenchmark.StateObj.bufferPool);
+        while(parser.hasNext()) {
+            JsonParser.Event evt = parser.next();
+            tokenArray[tokPtr++] = evt;
+            switch(evt) {
+                case KEY_NAME, VALUE_STRING -> {
+                    String str = parser.getString();
+                    objectsArray[objPtr++] = str;
+                }
+                case VALUE_NUMBER -> {
+                    int num = parser.getInt();
+                    objectsArray[objPtr++] = num;
+                }
+            }
+        }
+        try {
+            input.reset();
+            parser.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void generateSpeculativeInfo(InputStream input, JsonParser.Event[] tokenArray, Object[] objectsArray) {
+        int tokPtr = 0;
+        int objPtr = 0;
+        AbstractParser parser = AbstractParser.create(input, SpeculativeKeysBenchmark.StateObj.byteBufferPool);
+        assert parser instanceof SpeculativeParser;
+        while(parser.hasNext()) {
+            JsonParser.Event evt = parser.next();
+            tokenArray[tokPtr++] = evt;
+            switch(evt) {
+                case KEY_NAME, VALUE_STRING -> {
+                    String str = parser.getString();
+                    objectsArray[objPtr++] = str;
+                }
+                case VALUE_NUMBER -> {
+                    int num = parser.getInt();
+                    objectsArray[objPtr++] = num;
+                }
+            }
+        }
+        try {
+            input.reset();
+            parser.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void runProfiling() {
+        try {
+            for (int i = 0; i < 20; i++) {
+                InputStream in = new StateObj().profileBasicJson10Keys100Length[ThreadLocalRandom.current().nextInt(0, 10)];
+                AbstractParser parser = AbstractParser.create(in, SpeculativeKeysBenchmark.StateObj.byteBufferPool);
+                while (parser.hasNext()) {
+                    JsonParser.Event evt = parser.next();
+                    switch (evt) {
+                        case KEY_NAME, VALUE_STRING -> {
+                            parser.getString();
+                        }
+                        case VALUE_NUMBER -> {
+                            parser.getInt();
+                        }
+                        default -> {
+                        }
+                    }
+                }
+                in.reset();
+                parser.close();
+            }
+        } catch (IOException e) {
+
+        }
     }
 
     @Benchmark

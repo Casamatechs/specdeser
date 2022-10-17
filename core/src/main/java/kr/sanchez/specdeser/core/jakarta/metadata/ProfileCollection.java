@@ -86,6 +86,7 @@ public class ProfileCollection {
     // TEST AND DEBUG METHODS //
 
     public static void resetProfileCollection() {
+        ProfileCollection.parserEventRecord.clear();
         ProfileCollection.metadataRecord.clear();
     }
 

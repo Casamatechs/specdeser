@@ -55,28 +55,6 @@ public class JsonGenerators {
         return new ByteArrayInputStream(ret.toString().getBytes(StandardCharsets.UTF_8));
     }
 
-//    public static InputStream fixedLengthKeysValuesJson(int keys, int lenKeys, int lenValues) {
-//        StringBuilder ret = new StringBuilder("{");
-//        for (int i = 0; i < keys; i++) {
-//            int t = i % 4;
-//            String key = "\"key" + generateString(lenKeys-3,String.valueOf(i)) + "\":";
-//            if (t == 0) {
-//                ret.append(key).append("\"cons").append(generateString(lenValues-4,String.valueOf(i))).append("\",");
-//            } else if (t == 1) {
-//                ret.append(key).append("\"string").append(ThreadLocalRandom.current().nextInt(100, 10000)).append("\",");
-//            } else if (t == 2) {
-//                ret.append(key).append(generateNumber(9,String.valueOf(i * 10 + 42))).append(",");
-//            } else if (t == 3) {
-//                ret.append(key).append(generateNumber(9,String.valueOf(ThreadLocalRandom.current().nextInt(100, 10000))));
-//                if (i != keys - 1) {
-//                    ret.append(",");
-//                }
-//            }
-//        }
-//        ret.append("}");
-//        return new ByteArrayInputStream(ret.toString().getBytes(StandardCharsets.UTF_8));
-//    }
-
     public static InputStream fixedValueLength(int nKeys, int lengthValue) {
         StringBuilder ret = new StringBuilder("{");
         for (int i = 0; i < nKeys; i++) {
@@ -100,20 +78,18 @@ public class JsonGenerators {
     }
 
     private static String generateKeyString(int nkeys, int number) {
-        if (number < 1) number = 1;
         StringBuilder builder = new StringBuilder();
         int i = 0;
-        while (i++ < ((int)Math.log10(nkeys) - (int)Math.log10(number))) {
+        while (i++ < ((int)Math.log10(nkeys) - (int)Math.log10(Math.max(number, 1)))) {
             builder.append("0");
         }
         return builder.append(number).toString();
     }
 
     private static String generateLengthKeyString(int number, int lengthKey) {
-        if (number < 1) number = 1;
         StringBuilder builder = new StringBuilder();
         int i = 0;
-        while (i++ < lengthKey - Math.log10(number) -1) {
+        while (i++ < lengthKey - Math.log10(Math.max(number,1)) -1) {
             builder.append("0");
         }
         return builder.append(number).toString();
@@ -128,7 +104,7 @@ public class JsonGenerators {
         return builder.toString();
     }
 
-    private static String generateRandomString(int lengthValue) {
+    public static String generateRandomString(int lengthValue) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < lengthValue; i++) {
             builder.append(CONSTANTS[ThreadLocalRandom.current().nextInt(0, CONSTANTS.length)]);

@@ -8,18 +8,19 @@ import kr.sanchez.specdeser.core.jakarta.metadata.values.*;
 import javax.json.stream.JsonParser;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public abstract class AbstractParser implements JsonParser {
     public static final byte[] BITSHIFT = new byte[]{24,16,8,0};
 
-    static final int TH = 1000; // TODO For the final implementation, capture this value from an ENV variable
+    static final int TH = System.getenv("PROFILING_EXECUTIONS") != null ? Integer.parseInt(System.getenv("PROFILING_EXECUTIONS")) : 10;
 
     static Integer[] speculationPointers;
 
     static VectorizedData[] vectorizedConstants;
     public final static int BUFFER_SIZE = 10 * 1024 * 1024;
 
-    static int invocations = 0;
+    public static int invocations = 0;
     public static boolean speculationEnabled = true;
 
     final byte[] TRUE = new byte[]{'t', 'r', 'u', 'e'};
@@ -41,7 +42,6 @@ public abstract class AbstractParser implements JsonParser {
         if (speculationEnabled) {
             return new SpeculativeParser(inputStream, bufferPool);
         } else {
-            System.err.println("OH NO SOMETHING WENT WRONG");
             return new FallbackParser(inputStream, bufferPool);
         }
     }
@@ -56,7 +56,6 @@ public abstract class AbstractParser implements JsonParser {
     private static VectorizedData[] buildSpeculativeConstants() {
         int evtPtr = 0;
         int metaPtr = 0;
-//        String constantStr = "";
         Event[] profiledEvents = ProfileCollection.getParserProfileCollection();
         MetadataValue[] profiledMetadata = ProfileCollection.getMetadataProfileCollection();
         final byte[] readVectorArray = new byte[BUFFER_SIZE];
@@ -71,9 +70,9 @@ public abstract class AbstractParser implements JsonParser {
                 if (evtPtr == profiledEvents.length -1 && readVectorPtr == 1 && readVectorArray[0] == ',') {
                     readVectorArray[0] = '}';
                 } else readVectorArray[readVectorPtr++] = '}';
-                VectorizedData vectorizedData = new VectorizedData(buildVectorizedValue(readVectorArray, readVectorPtr), readVectorPtr);
+                VectorizedData vectorizedData = new VectorizedData(AbstractInt.create(readVectorArray, 0, readVectorPtr > 1 ? 2 : 1), Arrays.copyOfRange(readVectorArray, 0, readVectorPtr));
                 provisionalArrayList.add(vectorizedData);
-                break; // TODO Remove this when we have real
+                break;
             }
             else if (profiledEvents[evtPtr] == Event.START_ARRAY) {
                 readVectorArray[readVectorPtr++] = '[';
@@ -126,9 +125,9 @@ public abstract class AbstractParser implements JsonParser {
                 } else keepConstant = false;
             }
             if (!keepConstant) {
-                VectorizedData vectorizedData = new VectorizedData(buildVectorizedValue(readVectorArray, readVectorPtr), readVectorPtr);
+                VectorizedData vectorizedData = new VectorizedData(AbstractInt.create(readVectorArray, 0, 2), Arrays.copyOfRange(readVectorArray, 0, readVectorPtr));
                 provisionalArrayList.add(vectorizedData);
-                readVectorPtr = 0; // TODO Check if we are at the end of an object/array or not
+                readVectorPtr = 0;
                 readVectorArray[readVectorPtr++] = ',';
                 keepConstant = true;
             }
@@ -151,18 +150,6 @@ public abstract class AbstractParser implements JsonParser {
             vectorArray[vectorPtr++] = b;
         }
         return vectorPtr;
-    }
-
-    private static AbstractInt[] buildVectorizedValue(byte[] byteArray, int size) {
-        AbstractInt[] res = size % 2 == 0 ? new AbstractInt[size/2] : new AbstractInt[size/2 + 1];
-        int arrPtr, resPtr;
-        arrPtr = resPtr = 0;
-        while (size - arrPtr >= 2) {
-            res[resPtr++] = AbstractInt.create(byteArray, arrPtr, size);
-            arrPtr += 2;
-        }
-        if (resPtr < res.length) res[resPtr] = AbstractInt.create(byteArray, arrPtr, size);
-        return res;
     }
 
     // TEST AND DEBUG FUNCTIONS //
